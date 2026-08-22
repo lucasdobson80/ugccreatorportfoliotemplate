@@ -1,0 +1,6 @@
+# Your uploads and settings live here at runtime, on the server's disk.
+# They are deliberately not committed — this repo stays the same size forever.
+assets/user/*
+!assets/user/.gitkeep
+
+.DS_Store

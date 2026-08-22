@@ -1,0 +1,2821 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--
+UGC CREATOR PORTFOLIO — a one-page portfolio you edit in the browser.
+
+HOW IT WORKS: sign in at /admin and the ✎ Edit button appears. Click any text to
+rewrite it, hit ⇄ on any photo or clip to swap it, drag sections into the order you
+want. Edits publish themselves a couple of seconds after you stop, into
+assets/user/ — that directory holds your whole site, so it's the only thing that
+needs backing up.
+
+THE HERO: plays your own clip as a frame sequence (upload it in edit mode and the
+server cuts it for you). Until you add one it paints a generated gradient film in
+whatever colours you picked, so the page never looks unfinished.
+
+MAKING IT YOURS: colours come from three values set in the setup wizard and flow
+through every CSS variable below. Fonts are Google Fonts, swapped per element in
+the style panel.
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Created by You</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<!-- fonts are served from this site, not from Google: no visitor IP leaves for a third party -->
+<link rel="stylesheet" href="assets/fonts.css">
+<style>
+  /* Ships on Terracotta. These three values are all the setup wizard writes —
+     everything else below is derived from them. */
+  :root{
+    --yellow:#dd9b6c; --butter:#f8ece2; --brown:#3d2418; --brown-soft:#736159;
+    --rule:rgba(61,36,24,.2); --dim:rgba(61,36,24,.66);
+    /* fixed copies of the palette that section tones can reach even after the
+       section-scoped --butter/--brown/--yellow have been remapped */
+    --t-ground:#f8ece2; --t-accent:#dd9b6c; --t-dark:#3d2418; --t-soft:#736159;
+    --btn-ink:var(--t-ground);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--butter);color:var(--brown);font-family:'Archivo',sans-serif;font-size:17px;line-height:1.6;overflow-x:hidden}
+  ::selection{background:var(--yellow);color:var(--brown)}
+  .display{font-family:'Anton',sans-serif;font-weight:400;text-transform:uppercase;line-height:.9;letter-spacing:.005em}
+  .caslon{font-family:'Libre Caslon Text',serif}
+  a{color:inherit}
+
+  /* bar-less nav — items spread over the film */
+  nav{position:absolute;top:0;left:0;right:0;z-index:50;display:flex;justify-content:space-between;align-items:center;padding:26px 4vw;font-size:14px;letter-spacing:.18em;font-weight:700;text-transform:uppercase;color:var(--butter)}
+  nav a{text-decoration:none;text-shadow:0 1px 10px rgba(63,45,29,.45);transition:opacity .2s}
+  nav a:hover{opacity:.75}
+
+  /* HERO — ambient boomerang playback */
+  #hero{height:170vh;position:relative}
+  #hero .stick{position:sticky;top:0;height:100vh;overflow:hidden;background:var(--butter)}
+  #hero canvas{position:absolute;inset:0;width:100%;height:100%}
+  .grade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(rgba(63,45,29,.14),transparent 26%,transparent 66%,rgba(63,45,29,.2))}
+
+  .name{position:absolute;left:6vw;top:50%;transform:translateY(calc(-50% + 30px)) scale(.98);opacity:0;transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1);pointer-events:none;text-align:left}
+  .name.on{opacity:1;transform:translateY(-50%) scale(1)}
+  /* the owner picks where the name sits over their film — whatever the clip leaves room for */
+  .name.pos-center{left:50%;right:auto;text-align:center;transform:translate(-50%,calc(-50% + 30px)) scale(.98)}
+  .name.pos-center.on{transform:translate(-50%,-50%) scale(1)}
+  .name.pos-right{left:auto;right:6vw;text-align:right}
+  .name.pos-right.on{transform:translateY(-50%) scale(1)}
+  /* big, but not shouting — it shared the frame with a film. Owners can size it
+     to taste in the style panel; this is just where it starts. */
+  .name h1{font-family:'Yellowtail',cursive;font-weight:400;font-size:clamp(3.6rem,13vw,11rem);line-height:1.08;color:var(--butter);text-shadow:0 4px 44px rgba(30,20,12,.5)}
+  .name .sub{margin-top:4px;text-align:center;color:var(--butter);font-size:clamp(.85rem,1.5vw,1.05rem);letter-spacing:.3em;text-transform:uppercase;font-weight:700;text-shadow:0 1px 12px rgba(63,45,29,.6)}
+  .name .sub .bigdot{color:var(--yellow);font-size:1.9em;line-height:0;vertical-align:-.18em;margin:0 .1em}
+
+  .scroll-cue{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);color:var(--butter);font-size:12px;letter-spacing:.3em;text-transform:uppercase;font-weight:700;text-shadow:0 1px 8px rgba(63,45,29,.6);transition:opacity .4s;text-align:center}
+  .scroll-cue .arr{display:block;font-size:18px;margin-top:4px;animation:bob 1.6s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+
+  .wrap{max-width:1200px;margin:0 auto;padding:0 30px}
+  .kicker{font-size:13px;letter-spacing:.26em;font-weight:700;text-transform:uppercase;color:var(--brown-soft);margin-bottom:26px}
+
+  #about{padding:96px 0 60px}
+  .about-grid{display:grid;grid-template-columns:1.12fr .88fr;gap:64px;align-items:start}
+  #about h2{font-size:clamp(2.8rem,6.5vw,5rem)}
+  #about .bio{font-size:clamp(1.12rem,1.75vw,1.32rem);line-height:1.65;margin-top:26px}
+  #about .bio p{margin-bottom:18px;max-width:46ch}
+  #about .bio b{font-family:'Archivo';font-weight:700}
+  /* about photo: one large portrait matching the text column height */
+  .about-grid{align-items:stretch}
+  .photos{padding-top:12px;height:100%;display:flex}
+  .photos figure{overflow:hidden;flex:1;display:flex}
+  .photos img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s cubic-bezier(.22,1,.36,1)}
+  .photos figure:hover img{transform:scale(1.04)}
+  #contact{position:relative;overflow:hidden}
+  #contact .wrap{position:relative;z-index:2}
+  /* brand strip — thin butter band, caption above, logo circles you can flick through */
+  #brandstrip{padding:10px 0 26px}
+  .brand-cap{text-align:center;font-style:italic;color:var(--dim);font-size:13.5px;margin-bottom:14px}
+  .bviewport{width:100%;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+  .brow{display:flex;width:max-content;will-change:transform}
+  .bset{display:flex;gap:22px;padding-right:22px}
+  html.editing .brow{transform:none!important;width:auto;flex-wrap:wrap;justify-content:center;margin:0 auto;padding:0 20px;gap:22px}
+  html.editing .bset{flex-wrap:wrap;justify-content:center;padding-right:0}
+  .bchip{position:relative;width:86px;height:86px;border-radius:50%;flex-shrink:0;background:#fffdf2;box-shadow:0 3px 10px rgba(63,45,29,.14)}
+  .bchip img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+  .bchip.empty{background:transparent;border:2px dashed rgba(63,45,29,.42);box-shadow:none;display:grid;place-items:center;color:var(--dim);font-size:26px;line-height:1;font-family:'Archivo';cursor:pointer}
+  /* the drift viewport clips and fades its edges — right for the marquee, wrong for
+     edit mode, where it was shaving the + chips and the remove badges */
+  html.editing .bviewport{overflow:visible;-webkit-mask-image:none;mask-image:none}
+  html.editing #brandstrip{padding-top:18px}
+  .bx{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;background:#c9412e;color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer;line-height:1;z-index:3}
+  @media (max-width:900px){.bchip{width:64px;height:64px}.bset{gap:14px;padding-right:14px}}
+  .cta-row{margin-top:42px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .btn-work{display:inline-block;background:var(--brown);color:var(--btn-ink);text-decoration:none;font-family:'Archivo';font-size:14px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;padding:16px 30px;border-radius:999px;transition:transform .25s,box-shadow .25s}
+  .btn-work:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(63,45,29,.3)}
+  .bubble{width:52px;height:52px;border-radius:50%;border:1.5px solid var(--brown);display:grid;place-items:center;transition:background .25s,transform .25s}
+  .bubble:hover{background:var(--yellow);transform:translateY(-2px)}
+  .bubble svg{width:22px;height:22px;fill:var(--brown)}
+  .bubble svg.ig{fill:none;stroke:var(--brown);stroke-width:1.8}
+  .bubble svg.ig .dot{fill:var(--brown);stroke:none}
+
+  #work{padding:110px 0 120px}
+  #work .kicker{color:var(--yellow)}
+  #work h2{font-size:clamp(2.6rem,6vw,4.6rem)}
+  #work .sub{margin-top:16px;max-width:56ch;opacity:.85;font-style:italic}
+  .tabs{margin-top:48px;display:flex;flex-wrap:wrap;gap:10px}
+  .tabs button{background:transparent;color:var(--brown);border:1.5px solid color-mix(in srgb,var(--brown) 45%,transparent);border-radius:999px;font-family:'Archivo';font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;padding:11px 20px;cursor:pointer;transition:background .25s,color .25s,border-color .25s}
+  .tabs button:hover{border-color:var(--yellow)}
+  .tabs button[aria-selected="true"]{background:var(--yellow);color:var(--t-dark);border-color:var(--yellow)}
+  .ntab-wrap{position:relative;display:inline-flex}
+  .ntab-lbl{outline:none;min-width:3ch}
+  .tabs .nx{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;
+    background:#c9412e;color:#fff;border:none;font-size:13px;font-weight:700;line-height:1;
+    padding:0;letter-spacing:0;cursor:pointer;display:none;z-index:2}
+  html.editing .tabs .nx{display:grid;place-items:center}
+  .tabs .nadd{display:none;border-style:dashed;opacity:.8}
+  html.editing .tabs .nadd{display:inline-block}
+  .tabs .nadd:hover{opacity:1;border-color:var(--yellow)}
+  .addslots{display:none;aspect-ratio:9/16;border:2px dashed color-mix(in srgb,var(--brown) 45%,transparent);border-radius:12px;
+    background:none;color:var(--brown);font-family:'Archivo';cursor:pointer;
+    font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+  html.editing .addslots{display:grid;place-items:center}
+  .addslots b{display:block;font-size:26px;line-height:1;margin-bottom:6px;font-weight:400}
+  .addslots:hover{border-color:var(--yellow)}
+  .grid{margin-top:44px;display:grid;grid-template-columns:repeat(4,1fr);gap:26px}
+  .niche-grid[hidden]{display:none}
+  /* visitors see only slots with real clips; edit mode reveals every slot */
+  .niche-grid .clip{display:none}
+  .niche-grid .clip[data-filled]{display:block}
+  html.editing .niche-grid .clip{display:block}
+  .clip[data-filled] .tag{display:none}
+  html.editing .niche-grid .clip:not([data-filled]){outline:2px dashed color-mix(in srgb,var(--brown) 50%,transparent);outline-offset:4px}
+  .empty-note{grid-column:1/-1;font-style:italic;font-size:1.15rem;opacity:.85;padding:26px 0 8px}
+  html.editing .empty-note{display:none}
+  .clip{position:relative;aspect-ratio:9/16;overflow:hidden;border-radius:12px;background:rgba(243,236,184,.08)}
+  .clip img{width:100%;height:100%;object-fit:cover;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+  .clip:hover img{transform:scale(1.05)}
+  .clip .tag{position:absolute;top:12px;left:12px;background:var(--yellow);color:var(--t-dark);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;padding:5px 10px;border-radius:6px}
+  .clip .meta{position:absolute;inset:auto 0 0 0;padding:34px 14px 12px;background:linear-gradient(transparent,rgba(43,30,18,.88));font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+  .clip .meta span{display:block;font-weight:400;letter-spacing:.06em;text-transform:none;opacity:.8;margin-top:3px;font-style:italic;font-family:'Libre Caslon Text',serif}
+
+  #gallery{padding:88px 0 96px}
+  #gallery .sub{max-width:56ch;font-style:italic;color:var(--dim);margin-top:14px}
+  .ggrid{margin-top:48px;display:grid;grid-template-columns:repeat(5,1fr);gap:16px;padding:0 22px}
+  .ggrid figure{overflow:hidden}
+  .ggrid img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;transition:transform .6s cubic-bezier(.22,1,.36,1)}
+  .ggrid figure:hover img{transform:scale(1.05)}
+
+  #contact{padding:118px 0 128px;text-align:center}
+  #contact .kicker{color:var(--brown)}
+  #contact h2{font-size:clamp(3.4rem,10.5vw,8.5rem)}
+  #contact p.lede{margin:28px auto 44px;max-width:46ch;font-style:italic;font-size:1.2rem}
+  #contact a.mail{display:inline-block;background:var(--brown);color:var(--btn-ink);text-decoration:none;font-family:'Anton';text-transform:uppercase;font-size:clamp(1.2rem,2.6vw,1.8rem);letter-spacing:.04em;padding:22px 46px;border-radius:14px;transition:transform .25s,box-shadow .25s}
+  #contact a.mail:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(63,45,29,.35)}
+  #contact .socials{margin-top:30px;display:flex;gap:16px;justify-content:center}
+  #contact .bubble:hover{background:var(--brown)}
+  #contact .bubble:hover svg{fill:var(--butter)}
+  #contact .bubble:hover svg.ig{fill:none;stroke:var(--butter)}
+  #contact .bubble:hover svg.ig .dot{fill:var(--butter)}
+
+  section[hidden]{display:none!important}
+  /* Section tones. Every rule inside a section colours itself with var(--brown)/
+     var(--butter)/var(--yellow), so remapping those three inside the section is all
+     it takes to repaint it — buttons, kickers, rules and dims follow on their own. */
+  .tone-ground{background:var(--t-ground);color:var(--brown);
+    --butter:var(--t-ground);--brown:var(--t-dark);--yellow:var(--t-accent);--brown-soft:var(--t-soft);
+    --rule:color-mix(in srgb,var(--t-dark) 20%,transparent);--dim:color-mix(in srgb,var(--t-dark) 66%,transparent);--btn-ink:var(--t-ground)}
+  .tone-accent{background:var(--t-accent);color:var(--brown);
+    --butter:var(--t-accent);--brown:var(--t-dark);--yellow:var(--t-ground);--brown-soft:color-mix(in srgb,var(--t-dark) 78%,var(--t-accent));
+    --rule:color-mix(in srgb,var(--t-dark) 26%,transparent);--dim:color-mix(in srgb,var(--t-dark) 70%,transparent);--btn-ink:var(--t-ground)}
+  .tone-dark{background:var(--t-dark);color:var(--brown);
+    --butter:var(--t-dark);--brown:var(--t-ground);--yellow:var(--t-accent);--brown-soft:color-mix(in srgb,var(--t-ground) 72%,var(--t-dark));
+    --rule:color-mix(in srgb,var(--t-ground) 25%,transparent);--dim:color-mix(in srgb,var(--t-ground) 68%,transparent);--btn-ink:var(--t-dark)}
+  #setupBanner{position:fixed;top:0;left:0;right:0;z-index:150;background:var(--brown);color:var(--butter);
+    font-size:12.5px;letter-spacing:.06em;text-align:center;padding:9px 14px;font-weight:700}
+  #setupBanner a{color:var(--yellow)}
+  #examples{padding:96px 0 104px;position:relative}
+  #examples h2{font-size:clamp(2.6rem,6vw,4.6rem)}
+  #examples .sub{margin-top:16px;max-width:56ch;font-style:italic;color:var(--dim)}
+  .exgrid{margin-top:44px;grid-template-columns:repeat(3,1fr)}
+  /* example tiles carry sound and native controls, so the caption sits under the
+     video instead of on top of the control bar */
+  .exvid{aspect-ratio:auto;background:none;overflow:visible;border-radius:0}
+  .exvid img,.exvid video,.exvid iframe{aspect-ratio:9/16;width:100%;height:auto;border-radius:12px;background:rgba(0,0,0,.08);display:block;border:none}
+  .exvid video{object-fit:cover}
+  .exvid .meta{position:static;background:none;padding:12px 2px 0;color:var(--brown)}
+  .exvid .meta span{color:var(--dim)}
+  .exvid .tag{display:none}
+  .exgrid .clip{display:none}
+  .exgrid .clip[data-filled]{display:block}
+  html.editing .exgrid .clip{display:block}
+  html.editing .exgrid .clip:not([data-filled]) img{outline:2px dashed rgba(61,36,24,.35);outline-offset:4px}
+  .mrep2{position:absolute;top:10px;right:10px;z-index:20;display:flex;gap:6px;flex-direction:column;align-items:flex-end}
+  .mrep2 .mrep{position:static}
+  #rates{padding:96px 0 100px;position:relative}
+  #rates h2{font-size:clamp(2.6rem,6vw,4.6rem)}
+  .rates-grid{margin-top:44px;display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .rate-card{border:1.5px solid var(--rule);border-radius:16px;padding:28px 24px;transition:transform .25s,box-shadow .25s}
+  .rate-card:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(0,0,0,.12)}
+  .rate-name{font-size:13px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--brown-soft)}
+  .rate-price{font-family:'Anton',sans-serif;font-size:clamp(2.2rem,4vw,3.2rem);margin:10px 0 12px;line-height:1}
+  .rate-desc{font-style:italic;color:var(--dim);font-size:.98rem;line-height:1.55}
+  .rates-note{margin-top:30px;font-style:italic;color:var(--dim)}
+  #rates .sub{margin-top:16px;max-width:56ch;font-style:italic;color:var(--dim)}
+  #stats{padding:72px 0;position:relative}
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:26px;text-align:center}
+  .stat-num{font-family:'Anton',sans-serif;font-size:clamp(2.4rem,5.5vw,4rem);color:var(--yellow);line-height:1}
+  .stat-lbl{margin-top:9px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;opacity:.85}
+  #reviews{padding:96px 0 104px;position:relative}
+  #reviews h2{font-size:clamp(2.6rem,6vw,4.6rem)}
+  .quotes{margin-top:44px;display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+  .quote{margin:0;border-left:3px solid var(--yellow);padding:6px 0 6px 20px}
+  .quote blockquote{margin:0;font-style:italic;font-size:1.05rem;line-height:1.62}
+  .quote figcaption{margin-top:14px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--brown-soft)}
+  #secList li.off{opacity:.5}
+  #secList .vis{background:transparent;border:1px solid rgba(243,236,184,.4);color:var(--butter);border-radius:7px;width:32px;height:32px;line-height:1;cursor:pointer;font-size:13px;padding:0;touch-action:manipulation}
+  #secList .vis:hover{background:rgba(243,236,184,.14)}
+  #secList .tone{width:22px;height:22px;border-radius:50%;border:2px solid rgba(243,236,184,.55);cursor:pointer;padding:0;flex-shrink:0}
+  #secList .tone:hover{border-color:var(--butter)}
+  .hero-ctl{margin-bottom:14px;border-bottom:1px solid rgba(243,236,184,.2);padding-bottom:14px}
+  .seg{display:flex;background:rgba(0,0,0,.3);border:1px solid rgba(243,236,184,.3);border-radius:10px;padding:3px;gap:3px}
+  .seg button{flex:1;background:transparent;border:none;color:var(--butter);opacity:.65;font-family:'Archivo',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:8px 4px;border-radius:7px;cursor:pointer}
+  .seg button:hover{opacity:.9}
+  .seg button[aria-pressed="true"]{background:var(--yellow);color:var(--t-dark);opacity:1}
+  .seg-hint{font-size:10.5px;opacity:.55;margin-top:6px;letter-spacing:.04em}
+  /* the on/off switch — an unmistakable toggle instead of two lookalike circles */
+  #secList .sw{position:relative;width:40px;height:24px;border-radius:999px;border:1px solid rgba(243,236,184,.35);background:rgba(0,0,0,.35);cursor:pointer;padding:0;flex-shrink:0;transition:background .2s,border-color .2s}
+  #secList .sw .knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:rgba(243,236,184,.55);transition:left .2s,background .2s}
+  #secList .sw[aria-pressed="true"]{background:var(--yellow);border-color:var(--yellow)}
+  #secList .sw[aria-pressed="true"] .knob{left:18px;background:#3d2418}
+  .credit-toggle{display:flex;gap:9px;align-items:flex-start;margin-top:12px;border-top:1px solid rgba(243,236,184,.2);padding-top:12px;font-size:12px;line-height:1.45;cursor:pointer}
+  .credit-toggle input{accent-color:var(--yellow);margin-top:1px}
+  .credit-toggle[hidden]{display:none}
+  footer #creditLine{color:var(--butter);opacity:.65;text-decoration:none;font-weight:700}
+  footer #creditLine:hover{opacity:1}
+  footer{background:var(--brown);color:var(--butter);padding:26px 30px;display:flex;justify-content:space-between;font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;opacity:.95}
+
+  @media (max-width:900px){
+    nav{padding:18px 18px;font-size:11px;letter-spacing:.12em}
+    .grid{grid-template-columns:repeat(2,1fr)}
+    .about-grid{grid-template-columns:1fr;gap:44px}
+    .ggrid{grid-template-columns:repeat(3,1fr);gap:10px;padding:0 12px}
+    .photos{height:auto}
+    .photos img{aspect-ratio:3/4;height:auto}
+    .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:38px}
+    .rates-grid,.quotes{grid-template-columns:1fr;gap:16px}
+    .exgrid{grid-template-columns:1fr 1fr;gap:14px}
+    .stats-row{grid-template-columns:1fr 1fr;gap:22px}
+    .tabs button{font-size:11px;letter-spacing:.08em;padding:9px 6px;text-align:center}
+    .ntab-wrap{width:100%}
+    .ntab-wrap .ntab-lbl{width:100%}
+    .cta-row{flex-wrap:nowrap;gap:12px}
+    .btn-work{font-size:12.5px;letter-spacing:.12em;padding:14px 20px;white-space:nowrap}
+    .bubble{width:46px;height:46px;flex-shrink:0}
+    .bubble svg{width:20px;height:20px}
+    .name,.name.pos-center,.name.pos-right{left:50%;right:auto;transform:translate(-50%,calc(-50% + 30px)) scale(.98);text-align:center;width:max-content;max-width:96vw}
+    .name.on,.name.pos-center.on,.name.pos-right.on{transform:translate(-50%,-50%) scale(1)}
+    .name .sub{font-size:.78rem;letter-spacing:.2em;white-space:nowrap}
+    footer{flex-direction:column;gap:8px;align-items:center;text-align:center;padding:24px 18px 88px}
+    #editBtn{bottom:16px;right:16px;padding:10px 14px;font-size:12px}
+    #stylePanel{right:12px;left:auto;width:min(304px,calc(100vw - 24px));bottom:64px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    #hero{height:100vh}
+    .scroll-cue .arr{animation:none}
+    *{transition:none!important}
+  }
+
+  /* ---- edit mode (site-owner tooling; visitors never see it active) ---- */
+  #editBtn{position:fixed;bottom:20px;right:20px;z-index:120;background:var(--brown);color:var(--butter);border:none;font-family:'Archivo';font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:12px 18px;border-radius:999px;cursor:pointer;box-shadow:0 8px 24px rgba(63,45,29,.35);display:none}
+  html.editing #editBtn{background:var(--yellow);color:var(--brown)}
+  html.editing [data-eid]{outline:1.5px dashed rgba(63,45,29,.4);outline-offset:3px;cursor:text;min-width:1ch}
+  html.editing [data-eid]:hover,html.editing [data-eid]:focus{outline:2px solid #c9552e;outline-offset:3px}
+  html.editing .name{pointer-events:auto}
+  html.editing nav a{cursor:text}
+  .mrep{position:absolute;top:10px;right:10px;z-index:20;background:#c9552e;color:#fff;border:none;font-family:'Archivo';font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:7px 12px;border-radius:999px;cursor:pointer;box-shadow:0 4px 14px rgba(63,45,29,.4)}
+  html.editing .photos figure,html.editing .ggrid figure{position:relative}
+  #stylePanel{position:fixed;bottom:74px;right:20px;z-index:120;background:var(--brown);color:var(--butter);padding:16px 18px 18px;border-radius:14px;box-shadow:0 14px 40px rgba(63,45,29,.4);width:304px;font-size:13px;max-height:min(74vh,600px);overflow-y:auto;overscroll-behavior:contain}
+  /* one panel, three tabs — text, stickers and layout used to be separate boxes
+     stacked in the same corner, where they simply sat on top of each other */
+  .sp-tabs{display:flex;gap:4px;margin:-2px 0 14px}
+  .sp-tabs button{flex:1;background:transparent;border:none;border-bottom:2px solid rgba(243,236,184,.2);
+    color:var(--butter);opacity:.6;font-family:'Archivo',sans-serif;font-size:11.5px;font-weight:700;
+    letter-spacing:.1em;text-transform:uppercase;padding:7px 2px;cursor:pointer}
+  .sp-tabs button:hover{opacity:.9}
+  .sp-tabs button[aria-selected="true"]{opacity:1;border-bottom-color:var(--yellow)}
+  .sp-pane[hidden]{display:none}
+  .sp-foot{margin-top:14px;border-top:1px solid rgba(243,236,184,.2);padding-top:12px}
+  #stylePanel p#spTarget,#stylePanel p#trayTarget{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.7;margin-bottom:12px}
+  #stylePanel label{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;font-weight:700}
+  #stylePanel select,#stylePanel input{font-family:'Archivo';font-size:13px;padding:6px 8px;border-radius:8px;border:none;background:var(--butter);color:var(--brown);width:140px}
+  #stylePanel .row{display:flex;gap:8px;margin-top:6px}
+  #stylePanel .row button{flex:1;background:transparent;color:var(--butter);border:1px solid rgba(243,236,184,.5);border-radius:8px;padding:7px 6px;font-family:'Archivo';font-size:11.5px;font-weight:700;cursor:pointer}
+  #stylePanel .row button:hover{background:rgba(243,236,184,.14)}
+  /* ---- stickers ----
+     They live in one overlay spanning the whole page rather than inside each section,
+     which is what lets a sticker hang over a section boundary. Sitting at z-index 0 the
+     overlay paints above every section's background but below its content (all marked
+     z-index 1 below), so a sticker can bleed onto the next section without ever
+     covering the words there. It takes no pointer events, so nothing it overlaps
+     becomes unclickable. */
+  #stickerOverlay{position:absolute;top:0;left:0;width:100%;pointer-events:none;z-index:0}
+  .sticker{position:absolute;pointer-events:none;color:var(--yellow);opacity:.9;
+    transform-origin:50% 50%;will-change:transform;line-height:0}
+  .sticker svg{width:100%;height:auto;display:block}
+  /* while editing the overlay lifts above the content, otherwise a sticker resting
+     under a gallery photo could never be grabbed again */
+  html.editing #stickerOverlay{z-index:5}
+  html.editing .sticker{pointer-events:auto;cursor:grab;touch-action:none}
+  html.editing .sticker:hover{outline:1.5px dashed rgba(127,127,127,.6);outline-offset:5px}
+  html.editing .sticker.sel{outline:2px solid #c9552e;outline-offset:5px;cursor:grabbing}
+  /* the sticker being dragged in from the tray, following the finger */
+  .sticker-ghost{position:fixed;pointer-events:none;z-index:200;color:var(--yellow);opacity:.85;
+    line-height:0;transform:translate(-50%,-50%)}
+  .sticker-ghost svg{width:100%;height:auto;display:block}
+  /* content sits above the overlay — these are the wrappers each section draws into */
+  #about .wrap,#work .wrap,#gallery .wrap,#gallery .ggrid,#contact .wrap,#rates .wrap,
+  #stats .wrap,#reviews .wrap,#examples .wrap,#brandstrip .brand-cap,#brandstrip .bviewport,footer > span{position:relative;z-index:1}
+  #about,#work,#gallery,#brandstrip{position:relative}
+
+  .tray-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0 4px}
+  .tray-grid button{background:rgba(243,236,184,.1);border:1px solid rgba(243,236,184,.25);border-radius:9px;
+    padding:6px;cursor:pointer;color:var(--butter);line-height:0}
+  .tray-grid button:hover{background:rgba(243,236,184,.24)}
+  .tray-grid svg{width:100%;height:auto;display:block}
+  .tray-hint{font-size:11.5px;opacity:.7;line-height:1.45;margin-top:8px}
+  .st-cols{display:flex;gap:7px;align-items:center;margin:0 0 12px}
+  .st-cols button{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+  .st-cols button[data-col="accent"]{background:var(--yellow)}
+  .st-cols button[data-col="ink"]{background:var(--brown);box-shadow:inset 0 0 0 1px rgba(243,236,184,.4)}
+  .st-cols button[data-col="light"]{background:var(--butter)}
+  .st-cols button[aria-pressed="true"]{border-color:#fff}
+  .st-cols input[type=color]{width:26px;height:26px;padding:0;border:none;border-radius:50%;
+    background:none;cursor:pointer}
+  /* every sticker on the page, so none of them can get lost */
+  .tray-list{margin-top:12px;border-top:1px solid rgba(243,236,184,.2);padding-top:10px}
+  .tray-list:empty{display:none}
+    .tray-list .item{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:7px;cursor:pointer;font-size:12px}
+  .tray-list .item:hover{background:rgba(243,236,184,.12)}
+  .tray-list .item.on{background:rgba(243,236,184,.18)}
+  .tray-list .item svg{width:15px;height:15px;flex-shrink:0}
+  .tray-list .item .where{flex:1;opacity:.85}
+  .tray-list .item .x{background:none;border:none;color:var(--butter);opacity:.55;cursor:pointer;
+    font-size:15px;line-height:1;padding:6px 8px;margin:-4px 0;border-radius:6px}
+  .tray-list .item .x:hover{opacity:1;color:#ff9b7d}
+  .tray-list .all{width:100%;margin-top:8px;background:transparent;border:1px solid rgba(243,236,184,.4);
+    color:var(--butter);border-radius:8px;padding:7px;font-family:'Archivo',sans-serif;font-size:11px;
+    font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+  .tray-list .all:hover{background:rgba(243,236,184,.14)}
+  /* a found sticker pulses so the eye can catch it */
+  @keyframes stFind{0%,100%{transform:var(--st-t) scale(1)}50%{transform:var(--st-t) scale(1.35)}}
+  .sticker.finding{animation:stFind .55s ease-in-out 2}
+  #secList li .count{font-size:10.5px;background:var(--yellow);color:var(--brown);border-radius:999px;
+    padding:1px 6px;font-weight:700;cursor:pointer;border:none}
+  #secList li .count:hover{filter:brightness(1.12)}
+  .tray-sel{margin-top:12px;border-top:1px solid rgba(243,236,184,.25);padding-top:11px}
+  .tray-sel[hidden]{display:none}
+  .tray-sel label{display:flex;align-items:center;gap:9px;margin-bottom:8px;font-size:11px;
+    letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+  .tray-sel input[type=range]{flex:1;accent-color:var(--yellow);width:auto;padding:0;background:none}
+  .tray-del{width:100%;background:#c9412e;color:#fff;border:none;border-radius:8px;padding:8px;
+    font-family:'Archivo',sans-serif;font-size:12px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;cursor:pointer}
+
+  /* section reordering — a small list beats dragging full-height sections around */
+  #secOrder{margin-top:16px;border-top:1px solid rgba(243,236,184,.25);padding-top:12px}
+  .sp-head{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.7;margin-bottom:8px}
+  #secList{list-style:none}
+  #secList li{display:flex;align-items:center;gap:9px;background:rgba(243,236,184,.1);border-radius:9px;padding:9px 10px;margin-bottom:7px;cursor:grab;font-size:12.5px;font-weight:700}
+  #secList li.drag{opacity:.4}
+  #secList li.over{outline:2px dashed rgba(243,236,184,.75);outline-offset:1px}
+  #secList .grip{opacity:.55;letter-spacing:-1px}
+  #secList .nm{flex:1}
+  /* 32px: an accidental brush while scrolling the panel was quietly reordering pages */
+  #secList .mv{background:transparent;border:1px solid rgba(243,236,184,.4);color:var(--butter);border-radius:7px;width:32px;height:32px;line-height:1;cursor:pointer;font-size:13px;padding:0;touch-action:manipulation}
+  #secList .mv:hover{background:rgba(243,236,184,.18)}
+  #secList .mv[disabled]{opacity:.15;cursor:default}
+
+  /* hero clip replace — sits under the nav so it never covers a menu item */
+  #heroRep{position:absolute;top:74px;left:50%;right:auto;transform:translateX(-50%);z-index:60;white-space:nowrap}
+  #heroPosBtn{position:absolute;top:118px;left:50%;right:auto;transform:translateX(-50%);z-index:60;white-space:nowrap;background:var(--brown)}
+  #heroRep[data-busy]{background:var(--brown);pointer-events:none}
+
+  /* ---- first-run setup wizard (owner only, once) ---- */
+  #wiz{position:fixed;inset:0;z-index:200;background:rgba(63,45,29,.62);backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px}
+  #wiz[hidden]{display:none}
+  .wiz-card{background:var(--butter);color:var(--brown);width:min(560px,100%);max-height:92vh;overflow:auto;border-radius:22px;padding:38px 38px 30px;box-shadow:0 30px 80px rgba(63,45,29,.45)}
+  .wiz-card h3{font-family:'Anton',sans-serif;text-transform:uppercase;font-size:clamp(1.7rem,4.4vw,2.5rem);line-height:1;letter-spacing:.01em}
+  .wiz-card p.help{font-family:'Libre Caslon Text',serif;font-style:italic;color:var(--dim);margin-top:12px;font-size:1rem}
+  .wiz-step[hidden]{display:none}
+  .wiz-card label{display:block;margin-top:20px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+  .wiz-card label em{font-style:normal;opacity:.5;letter-spacing:.08em;margin-left:6px}
+  .wiz-err{margin-top:12px;font-size:13.5px;font-weight:700;color:#c9412e}
+  .wiz-err[hidden]{display:none}
+  .wiz-card input.bad{border-color:#c9412e}
+  .wiz-card input[type=text],.wiz-card input[type=email],.wiz-card input[type=url]{width:100%;margin-top:7px;font-family:'Archivo',sans-serif;font-size:16px;padding:12px 14px;border:1.5px solid var(--rule);border-radius:12px;background:#fffdf2;color:var(--brown)}
+  .wiz-card input:focus{outline:2px solid var(--brown);outline-offset:1px}
+  .wiz-nav{margin-top:30px;display:flex;gap:12px;align-items:center;justify-content:space-between}
+  .wiz-nav[hidden]{display:none}
+  .wiz-nav .dots{display:flex;gap:6px}
+  .wiz-nav .dots i{width:7px;height:7px;border-radius:50%;background:var(--rule);display:block}
+  .wiz-nav .dots i.on{background:var(--brown)}
+  .wiz-btn{background:var(--brown);color:var(--butter);border:none;font-family:'Archivo',sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;padding:14px 26px;border-radius:999px;cursor:pointer;transition:transform .2s,box-shadow .2s}
+  .wiz-btn:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(63,45,29,.3)}
+  .wiz-btn.ghost{background:transparent;color:var(--brown);border:1.5px solid var(--rule);padding:14px 20px}
+  .wiz-btn[disabled]{opacity:.55;pointer-events:none}
+  /* palette grid: swatch stack + name, so the choice reads as a thing rather than three chips */
+  .wiz-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px;margin-top:18px}
+  .wiz-swatch{border:2px solid transparent;border-radius:13px;padding:6px;cursor:pointer;background:rgba(0,0,0,.03);text-align:left;font-family:inherit}
+  .wiz-swatch:hover{background:rgba(0,0,0,.06)}
+  .wiz-swatch[aria-pressed="true"]{border-color:var(--brown);background:rgba(0,0,0,.06)}
+  .wiz-swatch .bar{display:flex;height:26px;border-radius:7px;overflow:hidden}
+  .wiz-swatch .bar span{flex:1}
+  .wiz-swatch .bar span:first-child{flex:1.4}
+  .wiz-swatch b{display:block;margin-top:6px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;opacity:.75}
+
+  /* the preview is a miniature of the real page, redrawn on every colour change */
+  .swatch-preview{margin-top:18px;border-radius:14px;overflow:hidden;border:1px solid var(--rule);font-family:'Archivo',sans-serif}
+  .pv-hero{height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  .pv-name{font-family:'Pacifico',cursive;font-size:26px;line-height:1}
+  .pv-tag{font-size:8px;letter-spacing:.22em;text-transform:uppercase;font-weight:700}
+  .pv-body{padding:13px 14px;display:flex;flex-direction:column;gap:7px;align-items:flex-start}
+  .pv-line{height:6px;border-radius:3px;width:52%;display:block}
+  .pv-line.long{width:78%}
+  .pv-btn{margin-top:4px;font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;padding:7px 13px;border-radius:999px}
+  .pv-dark{padding:11px 14px;display:flex;gap:7px}
+  .pv-pill{font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:5px 11px;border-radius:999px}
+  .wiz-warn{margin-top:10px;font-size:13px;font-weight:700;color:#a8531c;line-height:1.45}
+  .wiz-warn[hidden]{display:none}
+
+  .wiz-checks{margin-top:20px;display:flex;flex-direction:column;gap:10px}
+  .wiz-checks label{display:flex;align-items:center;gap:12px;margin:0;padding:13px 14px;border:1.5px solid var(--rule);border-radius:13px;cursor:pointer;font-size:14px;letter-spacing:0;text-transform:none;font-weight:700}
+  .wiz-checks label:hover{border-color:var(--brown)}
+  .wiz-checks input{width:19px;height:19px;accent-color:var(--brown);flex-shrink:0}
+  .wiz-checks small{display:block;font-weight:400;font-family:'Libre Caslon Text',serif;font-style:italic;color:var(--dim);font-size:12.5px;margin-top:2px}
+  .wiz-more{margin-top:16px}
+  .wiz-more summary{cursor:pointer;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;opacity:.7}
+  .wiz-more summary:hover{opacity:1}
+  .wiz-customs{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap}
+  .wiz-customs label{margin-top:0;font-size:11px}
+  .wiz-customs input[type=color]{width:62px;height:38px;border:1.5px solid var(--rule);border-radius:10px;background:none;padding:2px;cursor:pointer;margin-top:6px;display:block}
+  .wiz-drop{margin-top:20px;border:2px dashed var(--rule);border-radius:16px;padding:26px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+  .wiz-drop:hover{border-color:var(--brown);background:rgba(63,45,29,.04)}
+  .wiz-drop b{display:block;font-size:15px;letter-spacing:.02em}
+  .wiz-drop small{color:var(--dim);font-style:italic;font-family:'Libre Caslon Text',serif}
+  .wiz-status{margin-top:14px;font-size:13px;font-weight:700;letter-spacing:.06em;min-height:18px}
+  @media (max-width:900px){.wiz-card{padding:26px 22px 22px;border-radius:18px}}
+
+  .clip video,.photos video,.ggrid video{width:100%;height:100%;object-fit:cover;display:block}
+  .photos video{aspect-ratio:3/4}
+  .ggrid video{aspect-ratio:3/4}
+</style>
+</head>
+<body>
+
+<section id="hero" aria-label="Opening film; scroll to reveal the name">
+  <div class="stick">
+    <canvas id="film"></canvas>
+    <div class="grade"></div>
+    <nav aria-label="Site">
+      <a href="#about">About</a>
+      <a href="#work">Work</a>
+      <a href="#gallery">Gallery</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <div class="name" id="name">
+      <h1 data-field="name">your name</h1>
+      <p class="sub" data-field="tagline">UGC Creator <span class="bigdot">•</span> UK</p>
+    </div>
+    <p class="scroll-cue" id="cue">Scroll<span class="arr">↓</span></p>
+  </div>
+</section>
+
+<section id="about" class="tone-ground">
+  <div class="wrap about-grid">
+    <div>
+      <p class="kicker">About me</p>
+      <h2 class="display" data-field="about-head">Hey, I'm ___.</h2>
+      <div class="caslon bio">
+        <p>I'm a UGC creator posting as <b data-field="handle">@yourhandle</b>. Use this first line to say what you make and who it's for.</p>
+        <p>A second short paragraph works well here — the formats you shoot, the niches you know, what brands get when they book you.</p>
+        <p>Click any text on this page to rewrite it. Two or three short paragraphs is plenty.</p>
+      </div>
+      <div class="cta-row">
+        <a class="btn-work scrollto" href="#contact">Work with me</a>
+        <a class="bubble" href="#" target="_blank" rel="noopener" aria-label="TikTok" data-social="tiktok">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+        </a>
+        <a class="bubble" href="#" target="_blank" rel="noopener" aria-label="Instagram" data-social="instagram">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="ig"><rect x="2.2" y="2.2" width="19.6" height="19.6" rx="5.2"/><circle cx="12" cy="12" r="4.6"/><circle class="dot" cx="17.6" cy="6.4" r="1.3"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="photos">
+      <figure><img loading="lazy" decoding="async" src="assets/placeholder/portrait.jpg" alt="Portrait"></figure>
+    </div>
+  </div>
+</section>
+
+<section id="brandstrip" class="tone-ground" aria-label="Brands featured in videos">
+  <p class="brand-cap caslon" data-eid="b-cap">Brands I feature in my videos</p>
+  <div class="bviewport" id="bViewport"><div class="brow" id="bRow"></div></div>
+</section>
+
+<section id="work" class="tone-dark">
+  <div class="wrap">
+    <p class="kicker">The work</p>
+    <h2 class="display">Selected clips.</h2>
+    <p class="sub caslon">One line about your videos goes here. Visitors only ever see the slots you fill.</p>
+    <div class="tabs" role="tablist" aria-label="Niches" id="nicheTabs"></div>
+    <div id="nicheGrids"></div>
+  </div>
+</section>
+
+<section id="gallery" class="tone-ground">
+  <div class="wrap">
+    <p class="kicker">Gallery</p>
+    <h2 class="display">Me, on camera.</h2>
+    <p class="sub caslon">A few photos of you — behind the scenes and on camera. Press ⇄ on any tile to swap it.</p>
+  </div>
+  <div class="ggrid">
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-01.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-02.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-03.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-04.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-05.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-06.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-07.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-08.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-09.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-10.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-11.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-12.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-13.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-14.jpg" alt=""></figure>
+    <figure><img loading="lazy" decoding="async" src="assets/placeholder/g-15.jpg" alt=""></figure>
+  </div>
+</section>
+
+<section id="contact" class="tone-accent">
+  <div class="wrap">
+    <p class="kicker">Contact</p>
+    <h2 class="display">Got a brief?</h2>
+    <p class="lede caslon">A short line inviting brands to get in touch goes here.</p>
+    <a class="mail" data-field="email" href="mailto:you@example.com?subject=Brief">you@example.com</a>
+    <div class="socials">
+      <a class="bubble" href="#" target="_blank" rel="noopener" aria-label="TikTok" data-social="tiktok">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+      </a>
+      <a class="bubble" href="#" target="_blank" rel="noopener" aria-label="Instagram" data-social="instagram">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="ig"><rect x="2.2" y="2.2" width="19.6" height="19.6" rx="5.2"/><circle cx="12" cy="12" r="4.6"/><circle class="dot" cx="17.6" cy="6.4" r="1.3"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+
+<section id="rates" class="tone-ground" hidden>
+  <div class="wrap">
+    <p class="kicker" data-eid="r-kick">Rates</p>
+    <h2 class="display" data-eid="r-head">Work with me.</h2>
+    <p class="sub caslon" data-eid="r-sub">One line on how you work — what every package includes.</p>
+    <div class="rates-grid">
+      <div class="rate-card">
+        <p class="rate-name" data-eid="r-0-name">One video</p>
+        <p class="rate-price" data-eid="r-0-price">£120</p>
+        <p class="rate-desc caslon" data-eid="r-0-desc">Describe what this includes — deliverables, formats, turnaround.</p>
+      </div>
+      <div class="rate-card">
+        <p class="rate-name" data-eid="r-1-name">Three videos</p>
+        <p class="rate-price" data-eid="r-1-price">£300</p>
+        <p class="rate-desc caslon" data-eid="r-1-desc">Describe the bundle — and say what makes it the smart pick.</p>
+      </div>
+      <div class="rate-card">
+        <p class="rate-name" data-eid="r-2-name">Monthly</p>
+        <p class="rate-price" data-eid="r-2-price">£950</p>
+        <p class="rate-desc caslon" data-eid="r-2-desc">Describe the retainer — what a month of working together covers.</p>
+      </div>
+    </div>
+    <p class="rates-note caslon" data-eid="r-note">A closing line for custom asks goes here.</p>
+  </div>
+</section>
+
+<section id="stats" class="tone-dark" hidden>
+  <div class="wrap stats-row">
+    <div class="stat"><p class="stat-num" data-eid="st-0-n">120k</p><p class="stat-lbl" data-eid="st-0-l">Followers</p></div>
+    <div class="stat"><p class="stat-num" data-eid="st-1-n">2.4m</p><p class="stat-lbl" data-eid="st-1-l">Monthly views</p></div>
+    <div class="stat"><p class="stat-num" data-eid="st-2-n">8.1%</p><p class="stat-lbl" data-eid="st-2-l">Engagement</p></div>
+    <div class="stat"><p class="stat-num" data-eid="st-3-n">40+</p><p class="stat-lbl" data-eid="st-3-l">Videos delivered</p></div>
+  </div>
+</section>
+
+<section id="reviews" class="tone-ground" hidden>
+  <div class="wrap">
+    <p class="kicker" data-eid="q-kick">Kind words</p>
+    <h2 class="display" data-eid="q-head">Brands say it best.</h2>
+    <div class="quotes">
+      <figure class="quote">
+        <blockquote class="caslon" data-eid="q-0-text">“Paste a short quote from a brand here — one or two sentences is plenty.”</blockquote>
+        <figcaption data-eid="q-0-who">Name · brand</figcaption>
+      </figure>
+      <figure class="quote">
+        <blockquote class="caslon" data-eid="q-1-text">“A second quote goes here — results and numbers land especially well.”</blockquote>
+        <figcaption data-eid="q-1-who">Name · brand</figcaption>
+      </figure>
+      <figure class="quote">
+        <blockquote class="caslon" data-eid="q-2-text">“And a third — repeat bookings make the strongest closer.”</blockquote>
+        <figcaption data-eid="q-2-who">Name · brand</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+
+<section id="examples" class="tone-ground" hidden>
+  <div class="wrap">
+    <p class="kicker" data-eid="ex-kick">Brand work</p>
+    <h2 class="display" data-eid="ex-head">Ads I've made for brands.</h2>
+    <p class="sub caslon" data-eid="ex-sub">Real deliverables, exactly as they ran — press play, sound on.</p>
+    <div class="grid exgrid"></div>
+    <p class="empty-note caslon" hidden data-eid="ex-empty">Brand examples are on their way x</p>
+  </div>
+</section>
+
+<footer><span data-field="copyright">© 2026 Your Name</span><span>Your city</span></footer>
+
+<button id="editBtn" type="button">✎ Edit</button>
+<div id="stylePanel" hidden>
+  <div class="sp-tabs" role="tablist">
+    <button type="button" role="tab" data-pane="text" aria-selected="true">Text</button>
+    <button type="button" role="tab" data-pane="stickers" aria-selected="false">Stickers</button>
+    <button type="button" role="tab" data-pane="layout" aria-selected="false">Layout</button>
+  </div>
+
+  <div class="sp-pane" data-pane="text">
+    <p id="spTarget">Click any text to style it</p>
+    <label>Font
+    <select id="spFont">
+      <option value="">(keep)</option>
+      <optgroup label="Script — for your name">
+        <option value="'Yellowtail', cursive">Yellowtail — retro brush</option>
+        <option value="'Sacramento', cursive">Sacramento — fine script</option>
+        <option value="'Grand Hotel', cursive">Grand Hotel — vintage</option>
+        <option value="'Caveat', cursive">Caveat — handwritten</option>
+        <option value="'Pacifico', cursive">Pacifico — rounded script</option>
+      </optgroup>
+      <optgroup label="Display — for headings">
+        <option value="'Anton', sans-serif">Anton — heavy caps</option>
+        <option value="'Bebas Neue', sans-serif">Bebas Neue — tall caps</option>
+        <option value="'Playfair Display', serif">Playfair — elegant</option>
+        <option value="'DM Serif Display', serif">DM Serif — modern</option>
+        <option value="'Young Serif', serif">Young Serif — chunky</option>
+      </optgroup>
+      <optgroup label="Body — for paragraphs">
+        <option value="'Archivo', sans-serif">Archivo — clean</option>
+        <option value="'Inter', sans-serif">Inter — neutral</option>
+        <option value="'Work Sans', sans-serif">Work Sans — friendly</option>
+        <option value="'Karla', sans-serif">Karla — quirky</option>
+        <option value="'Lora', serif">Lora — readable serif</option>
+        <option value="'Libre Caslon Text', serif">Caslon — classic serif</option>
+      </optgroup>
+    </select>
+    </label>
+    <label>Size <input id="spSize" type="number" min="8" max="400" step="1" placeholder="px"></label>
+    <div class="row">
+      <button id="spResetEl" type="button">Reset this</button>
+      <button id="spResetAll" type="button">Reset all edits</button>
+    </div>
+  </div>
+
+  <div class="sp-pane" data-pane="stickers" hidden>
+    <p id="trayTarget">Drag one onto the page</p>
+    <div class="tray-grid" id="trayGrid"></div>
+    <div class="tray-sel" id="traySel" hidden>
+      <label>Size <input id="stSize" type="range" min="34" max="240" step="2"></label>
+      <label>Turn <input id="stRot" type="range" min="-180" max="180" step="5"></label>
+      <p class="sp-head">Colour</p>
+      <div class="st-cols" id="stCols">
+        <button type="button" data-col="accent" title="Accent" aria-label="Accent colour"></button>
+        <button type="button" data-col="ink" title="Ink" aria-label="Ink colour"></button>
+        <button type="button" data-col="light" title="Light" aria-label="Light colour"></button>
+        <input id="stCustom" type="color" title="Any colour" aria-label="Custom colour">
+      </div>
+      <button class="tray-del" id="stDel" type="button">Remove sticker</button>
+    </div>
+    <div class="tray-list" id="trayList"></div>
+  </div>
+
+  <div class="sp-pane" data-pane="layout" hidden>
+    <div class="hero-ctl">
+      <p class="sp-head">Hero — name position</p>
+      <div class="seg" id="namePosSeg" role="group" aria-label="Where your name sits over the film">
+        <button type="button" data-pos="left">Left</button>
+        <button type="button" data-pos="center">Centre</button>
+        <button type="button" data-pos="right">Right</button>
+      </div>
+      <p class="seg-hint">Phones always centre it.</p>
+    </div>
+    <p class="sp-head">Sections — drag to reorder, switch on or off</p>
+    <ul id="secList" aria-label="Drag to reorder the page"></ul>
+    <label id="creditToggle" class="credit-toggle" hidden>
+      <input type="checkbox" id="creditBox">
+      <span>Add a small "this site is a template" link in the footer</span>
+    </label>
+  </div>
+
+  <div class="row sp-foot">
+    <button id="spColours" type="button">Colours</button>
+    <button id="spWizard" type="button">Setup wizard</button>
+  </div>
+  <div class="row">
+    <button id="spBackup" type="button" title="Download everything on your site — photos, clips and settings — as one file">Download backup</button>
+  </div>
+</div>
+
+<input id="filePick" type="file" hidden>
+<input id="heroPick" type="file" accept="video/*" hidden>
+
+<div id="wiz" hidden>
+  <div class="wiz-card" role="dialog" aria-modal="true" aria-label="Set up your portfolio">
+    <section class="wiz-step" data-step="0">
+      <h3>Let's set up your site.</h3>
+      <p class="help">Six quick questions — a minute, tops. Everything here stays editable afterwards: click any text on the page to change it.</p>
+      <div class="wiz-nav"><span></span><button class="wiz-btn" type="button" data-next>Start</button></div>
+    </section>
+
+    <section class="wiz-step" data-step="1" hidden>
+      <h3>What's your name?</h3>
+      <p class="help">This is the big script name over your film, and the "Hey, I'm ___" on your About section.</p>
+      <label for="wName">Your name <em>required</em></label>
+      <input id="wName" type="text" autocomplete="name" placeholder="e.g. Jamie" maxlength="40" required>
+      <label for="wTagline">One-line tagline</label>
+      <input id="wTagline" type="text" placeholder="e.g. UGC Creator • UK" maxlength="60">
+      <p class="wiz-err" id="wErr1" hidden>Pop your name in and we'll put it up in lights.</p>
+    </section>
+
+    <section class="wiz-step" data-step="2" hidden>
+      <h3>Where can brands find you?</h3>
+      <p class="help">Leave anything blank and that icon simply won't show.</p>
+      <label for="wHandle">Your handle</label>
+      <input id="wHandle" type="text" placeholder="e.g. @jamiecreates" maxlength="40">
+      <label for="wTikTok">TikTok link</label>
+      <input id="wTikTok" type="url" placeholder="https://www.tiktok.com/@you">
+      <label for="wInsta">Instagram link</label>
+      <input id="wInsta" type="url" placeholder="https://www.instagram.com/you">
+    </section>
+
+    <section class="wiz-step" data-step="3" hidden>
+      <h3>Where should briefs land?</h3>
+      <p class="help">The big button on your contact section opens a fresh email to this address.</p>
+      <label for="wEmail">Contact email <em>required</em></label>
+      <input id="wEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
+      <p class="wiz-err" id="wErr3" hidden>Brands need somewhere to reach you — add an email address.</p>
+    </section>
+
+    <section class="wiz-step" data-step="4" hidden>
+      <h3>Pick your colours.</h3>
+      <p class="help">Tap a palette to try it on. The preview below is your actual page.</p>
+
+      <div class="swatch-preview" id="wPreview" aria-hidden="true">
+        <div class="pv-hero"><span class="pv-name">Aa</span><span class="pv-tag">UGC Creator</span></div>
+        <div class="pv-body">
+          <span class="pv-line long"></span><span class="pv-line"></span>
+          <span class="pv-btn">Work with me</span>
+        </div>
+        <div class="pv-dark"><span class="pv-pill">Beauty</span><span class="pv-pill ghost">Fashion</span></div>
+      </div>
+      <p class="wiz-warn" id="wContrast" hidden></p>
+
+      <div class="wiz-swatches" id="wPresets"></div>
+
+      <details class="wiz-more">
+        <summary>Mix your own</summary>
+        <div class="wiz-customs">
+          <label>Background<input id="wGround" type="color"></label>
+          <label>Accent<input id="wAccent" type="color"></label>
+          <label>Ink<input id="wDark" type="color"></label>
+        </div>
+      </details>
+    </section>
+
+    <section class="wiz-step" data-step="5" hidden>
+      <h3>What's on your page?</h3>
+      <p class="help">Beyond the basics, there are four extra sections. They start switched off — tick what fits your pitch. You can change your mind any time from the editor's Layout tab.</p>
+      <div class="wiz-checks" id="wSections"></div>
+    </section>
+
+    <section class="wiz-step" data-step="6" hidden>
+      <h3>Add your hero film.</h3>
+      <p class="help">A short clip of you — 8 seconds is plenty; we use the first 8 and loop them. This one's optional: skip it and the page plays a soft gradient film in your colours until you're ready. You can add it any time from the ⇄ button on the hero.</p>
+      <div class="wiz-drop" id="wHeroDrop">
+        <b>Choose a video</b>
+        <small>mp4 or mov, straight off your phone is fine</small>
+      </div>
+      <p class="wiz-status" id="wHeroStatus"></p>
+    </section>
+
+    <section class="wiz-step" data-step="7" hidden>
+      <h3>That's you, live.</h3>
+      <p class="help">Your site is published. From here: click any text to rewrite it, hit ⇄ on any photo or clip to swap it, and add brand logos under your About section. Everything saves itself.</p>
+      <p class="wiz-status" id="wDoneStatus"></p>
+    </section>
+
+    <div class="wiz-nav" id="wizNav" hidden>
+      <button class="wiz-btn ghost" type="button" data-back>Back</button>
+      <span class="dots" id="wizDots"></span>
+      <button class="wiz-btn" type="button" data-next>Next</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* the hero plays the owner's own clip as a frame sequence (uploaded in edit mode,
+     extracted server-side by ffmpeg). Until one is uploaded it paints a generated
+     gradient film in the site's own colours — no bundled footage, nothing to licence. */
+  const PATH=i=>`assets/user/hero/p_${String(i).padStart(3,'0')}.jpg`;
+  const canvas=document.getElementById('film'), ctx=canvas.getContext('2d');
+  const hero=document.getElementById('hero'), name=document.getElementById('name'), cue=document.getElementById('cue');
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let FRAMES=0, DUR=8, imgs=[], painted=-1;
+  let ready=0, started=false, startAt=0, mode='placeholder';
+  function size(){
+    canvas.width=Math.max(1,innerWidth*devicePixelRatio);
+    canvas.height=Math.max(1,innerHeight*devicePixelRatio);
+    painted=-1;ph.w=0;
+  }
+  function drawCover(img){
+    const cw=canvas.width,ch=canvas.height,iw=img.naturalWidth,ih=img.naturalHeight;
+    const s=Math.max(cw/iw,ch/ih),w=iw*s,h=ih*s;
+    ctx.drawImage(img,(cw-w)/2,(ch-h)/2,w,h);
+  }
+  function frameAt(t){
+    /* continuous forward loop */
+    const f=((t/1000)%DUR)/DUR;
+    return Math.min(FRAMES-1,Math.round(f*(FRAMES-1)));
+  }
+
+  /* ---- generated placeholder film: slow blooms of the site's colours, plus grain.
+     Drawn at half resolution into an offscreen canvas and upscaled — full-screen
+     radial gradients every frame would cost more than the real film does. */
+  const ph={cv:document.createElement('canvas'),w:0,h:0,last:0,grain:null};
+  ph.ctx=ph.cv.getContext('2d');
+  function cssVar(n,fb){const v=getComputedStyle(document.documentElement).getPropertyValue(n).trim();return v||fb}
+  function rgbaOf(hex,a){
+    const h=hex.replace('#','');
+    const n=h.length===3?h.split('').map(c=>c+c).join(''):h;
+    const i=parseInt(n,16);
+    return `rgba(${(i>>16)&255},${(i>>8)&255},${i&255},${a})`;
+  }
+  function makeGrain(){
+    const g=document.createElement('canvas');g.width=g.height=96;
+    const gx=g.getContext('2d'), d=gx.createImageData(96,96);
+    for(let i=0;i<d.data.length;i+=4){
+      const v=200+Math.random()*55;
+      d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=26;
+    }
+    gx.putImageData(d,0,0);
+    return g;
+  }
+  function drawPlaceholder(now){
+    const w=Math.max(1,Math.round(canvas.width/2)), h=Math.max(1,Math.round(canvas.height/2));
+    if(ph.w!==w||ph.h!==h){ph.cv.width=w;ph.cv.height=h;ph.w=w;ph.h=h;ph.grain=ph.grain||makeGrain()}
+    if(now-ph.last<33)return;          /* ~30fps is plenty for something this slow */
+    ph.last=now;
+    const c=ph.ctx, t=now/1000;
+    const dark=cssVar('--brown','#3f2d1d'), accent=cssVar('--yellow','#e9dc8e'), ground=cssVar('--butter','#f3ecb8');
+    c.fillStyle=dark;c.fillRect(0,0,w,h);
+    const bloom=(x,y,r,col,a)=>{
+      const g=c.createRadialGradient(x,y,0,x,y,r);
+      g.addColorStop(0,rgbaOf(col,a));g.addColorStop(1,rgbaOf(col,0));
+      c.fillStyle=g;c.fillRect(0,0,w,h);
+    };
+    /* three blooms on slow, mismatched orbits so the loop never visibly repeats */
+    bloom(w*(.30+.16*Math.sin(t/17)),  h*(.34+.12*Math.cos(t/23)),  Math.max(w,h)*.62, accent, .58);
+    bloom(w*(.74+.13*Math.cos(t/29)),  h*(.66+.15*Math.sin(t/19)),  Math.max(w,h)*.52, ground, .34);
+    bloom(w*(.52+.22*Math.sin(t/13+2)),h*(.86+.10*Math.cos(t/31)),  Math.max(w,h)*.44, accent, .22);
+    /* a soft light sweep drifting across, like a projector gate */
+    const sx=((t/26)%1.6-.3)*w;
+    const sweep=c.createLinearGradient(sx,0,sx+w*.5,h);
+    sweep.addColorStop(0,rgbaOf(ground,0));sweep.addColorStop(.5,rgbaOf(ground,.13));sweep.addColorStop(1,rgbaOf(ground,0));
+    c.fillStyle=sweep;c.fillRect(0,0,w,h);
+    /* vignettes give the wash some depth and keep the pale name legible over it */
+    const vg=c.createLinearGradient(0,0,0,h);
+    vg.addColorStop(0,rgbaOf(dark,.5));vg.addColorStop(.4,rgbaOf(dark,0));
+    vg.addColorStop(.68,rgbaOf(dark,0));vg.addColorStop(1,rgbaOf(dark,.56));
+    c.fillStyle=vg;c.fillRect(0,0,w,h);
+    const corner=c.createRadialGradient(w/2,h/2,Math.min(w,h)*.25,w/2,h/2,Math.max(w,h)*.78);
+    corner.addColorStop(0,rgbaOf(dark,0));corner.addColorStop(1,rgbaOf(dark,.55));
+    c.fillStyle=corner;c.fillRect(0,0,w,h);
+    if(ph.grain){
+      const p=c.createPattern(ph.grain,'repeat');
+      c.save();c.globalCompositeOperation='overlay';
+      c.translate(Math.floor(Math.random()*96),Math.floor(Math.random()*96));
+      c.fillStyle=p;c.fillRect(-96,-96,w+192,h+192);c.restore();
+    }
+    ctx.drawImage(ph.cv,0,0,canvas.width,canvas.height);
+  }
+
+  function tick(now){
+    if(!reduced){
+      const r=hero.getBoundingClientRect();
+      if(r.bottom>0&&!document.hidden){
+        if(mode!=='film'){
+          drawPlaceholder(now);
+        } else {
+          if(!started){
+            /* hold the first frame as a poster until the whole film is buffered,
+               then start the loop cleanly from frame zero — no judder */
+            if(imgs[0]&&imgs[0].complete&&painted!==0){drawCover(imgs[0]);painted=0}
+            else if(painted<0)drawPlaceholder(now);
+            if(ready>=FRAMES){started=true;startAt=now}
+          }
+          if(started){
+            const idx=frameAt(now-startAt);
+            const im=imgs[idx];
+            if(im&&im.complete&&idx!==painted){drawCover(im);painted=idx}
+          }
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+  }
+  function onScroll(){
+    const on=reduced||scrollY>40;
+    name.classList.toggle('on',on);
+    cue.style.opacity=scrollY<20?1:0;
+  }
+  function load(i){
+    if(imgs[i])return;
+    const im=new Image();
+    im.onload=()=>{ /* pre-decode so playback never hitches on first paint */
+      if(im.decode){im.decode().then(()=>{ready++}).catch(()=>{ready++})}
+      else ready++;
+    };
+    im.onerror=()=>{ready++};
+    im.src=PATH(i);
+    imgs[i]=im;
+  }
+  /* the film is whatever the owner last uploaded; no manifest = no clip yet */
+  function startFilm(m){
+    FRAMES=m.frames;DUR=m.dur||(m.frames/(m.fps||24));
+    imgs=new Array(FRAMES);ready=0;started=false;painted=-1;mode='film';
+    if(reduced){
+      const im=new Image();im.src=PATH(Math.min(8,FRAMES-1));im.onload=()=>drawCover(im);
+    } else {
+      for(let i=0;i<FRAMES;i++)load(i);
+    }
+  }
+  function loadManifest(){
+    return fetch('assets/user/hero/manifest.json?t='+Date.now(),{cache:'no-store'})
+      .then(r=>r.ok?r.json():null).catch(()=>null)
+      .then(m=>{
+        if(m&&m.frames>1){startFilm(m);return true}
+        mode='placeholder';painted=-1;
+        return false;
+      });
+  }
+  if(reduced){
+    name.classList.add('on');
+    /* no animation loop for reduced motion — paint one still placeholder frame */
+    loadManifest().then(ok=>{if(!ok){size();drawPlaceholder(performance.now()+1000)}});
+  } else {
+    loadManifest();
+    requestAnimationFrame(tick);
+  }
+  /* edit mode calls this after a new clip finishes processing */
+  window.__heroFilm={reload:loadManifest,hasFilm:()=>mode==='film',
+    state:()=>({mode,frames:FRAMES,buffered:ready,started,painted})};
+  addEventListener('scroll',onScroll,{passive:true});
+  /* resizing clears the canvas — repaint at once rather than waiting for the next
+     frame, and fall back to the placeholder while a film is still buffering */
+  addEventListener('resize',()=>{size();if(!reduced&&(mode!=='film'||!started))drawPlaceholder(performance.now())});
+  size(); onScroll();
+  /* paint one frame straight away: rAF is throttled in background tabs, and the
+     hero should never be a blank rectangle while the loop waits its turn */
+  if(!reduced)drawPlaceholder(performance.now());
+
+  /* menu clicks travel through the page instead of jumping */
+  document.querySelectorAll('nav a[href^="#"], a.scrollto').forEach(a=>{
+    a.addEventListener('click',e=>{
+      if(document.documentElement.classList.contains('editing')){e.preventDefault();return}
+      const el=document.querySelector(a.getAttribute('href'));
+      if(!el)return;
+      e.preventDefault();
+      const from=scrollY, to=el.getBoundingClientRect().top+scrollY;
+      const dist=Math.abs(to-from), dur=Math.min(2400,600+dist*0.45);
+      if(reduced){window.scrollTo(0,to);return}
+      const start=performance.now();
+      (function step(now){
+        const t=Math.min(1,(now-start)/dur);
+        const e2=t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2; /* ease-in-out cubic */
+        window.scrollTo(0,from+(to-from)*e2);
+        if(t<1)requestAnimationFrame(step);
+      })(start);
+    });
+  });
+})();
+
+/* ---------- owner edit mode: text, fonts, sizes, photos, clips ---------- */
+(function(){
+  const LS_TEXT='site-edit-text', LS_STYLE='site-edit-style', LS_LINKS='site-edit-links',
+        LS_THEME='site-edit-theme', LS_ORDER='site-edit-order', LS_STICKERS='site-edit-stickers',
+        LS_NICHES='site-edit-niches', LS_HIDDEN='site-edit-hidden', LS_EMBEDS='site-edit-embeds',
+        LS_TONES='site-edit-tones', LS_EXSLOTS='site-edit-exslots', LS_CREDIT='site-edit-credit',
+        LS_HEROPOS='site-edit-heropos';
+  const html=document.documentElement;
+  const editBtn=document.getElementById('editBtn'), panel=document.getElementById('stylePanel');
+  const spTarget=document.getElementById('spTarget'), spFont=document.getElementById('spFont'), spSize=document.getElementById('spSize');
+  /* panel tabs */
+  panel.querySelectorAll('.sp-tabs button').forEach(tab=>tab.addEventListener('click',()=>{
+    panel.querySelectorAll('.sp-tabs button').forEach(t=>t.setAttribute('aria-selected',String(t===tab)));
+    panel.querySelectorAll('.sp-pane').forEach(p=>{p.hidden=p.dataset.pane!==tab.dataset.pane});
+  }));
+  const filePick=document.getElementById('filePick'), heroPick=document.getElementById('heroPick');
+  let currentEl=null, currentMedia=null;
+
+  /* stable ids for editable text */
+  const textSel=['nav a','.name h1','.name .sub','.kicker','h2','#about .bio p','.services p','.tabs button','#work .sub','#gallery .sub','#contact .lede','#contact a.mail','#contact .tk','.clip .meta','footer span','.scroll-cue'];
+  textSel.forEach((sel,si)=>document.querySelectorAll(sel).forEach((el,i)=>{
+    if(!el.closest('[data-eid]'))el.dataset.eid='t'+si+'-'+i;
+  }));
+  /* stable per-section ids for replaceable media (so slots never shuffle) */
+  document.querySelectorAll('.photos figure').forEach((f,i)=>{f.dataset.mid='a-'+i});
+  document.querySelectorAll('.ggrid figure').forEach((f,i)=>{f.dataset.mid='g-'+i});
+  document.querySelectorAll('.niche-grid').forEach(g=>{
+    g.querySelectorAll('.clip').forEach((f,i)=>{f.dataset.mid='c-'+g.dataset.niche+'-'+i});
+  });
+
+  /* niche tabs are generated from the niches list — see renderNiches() below */
+  function syncVideoPlayback(){
+    document.querySelectorAll('.niche-grid').forEach(g=>{
+      g.querySelectorAll('video').forEach(v=>{
+        if(g.hidden){
+          if(v.src){v.pause();v.removeAttribute('src');v.load()}
+        } else if(v.dataset.msrc&&!v.src){
+          v.src=v.dataset.msrc;v.play().catch(()=>{})
+        } else {v.play().catch(()=>{})}
+      });
+    });
+  }
+  /* videos added into a hidden tab start frozen — nudge them when anything changes */
+  setInterval(syncVideoPlayback,2000);
+
+  /* where 'get this template' points once the shop exists; empty hides the feature */
+  const STORE_URL='';
+  const readJSON=(k)=>{try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return {}}};
+  const store={
+    text:readJSON(LS_TEXT),
+    style:readJSON(LS_STYLE),
+    links:readJSON(LS_LINKS),
+    theme:readJSON(LS_THEME),
+    order:(()=>{try{const v=JSON.parse(localStorage.getItem(LS_ORDER)||'null');return Array.isArray(v)?v:null}catch(e){return null}})(),
+    stickers:(()=>{try{const v=JSON.parse(localStorage.getItem(LS_STICKERS)||'null');return Array.isArray(v)?v:null}catch(e){return null}})(),
+    niches:(()=>{try{const v=JSON.parse(localStorage.getItem(LS_NICHES)||'null');return Array.isArray(v)&&v.length?v:null}catch(e){return null}})(),
+    hidden:(()=>{try{const v=JSON.parse(localStorage.getItem(LS_HIDDEN)||'null');return Array.isArray(v)?v:null}catch(e){return null}})(),
+    embeds:readJSON(LS_EMBEDS),
+    tones:readJSON(LS_TONES),
+    exSlots:(()=>{const v=Number(localStorage.getItem(LS_EXSLOTS));return v>=1?v:null})(),
+    credit:(()=>{const v=localStorage.getItem(LS_CREDIT);return v===null?null:v==='1'})(),
+    heroPos:(()=>{const v=localStorage.getItem(LS_HEROPOS);return ['left','center','right'].includes(v)?v:null})()
+  };
+  const saveText=()=>localStorage.setItem(LS_TEXT,JSON.stringify(store.text));
+  const saveStyle=()=>localStorage.setItem(LS_STYLE,JSON.stringify(store.style));
+  const saveLinks=()=>localStorage.setItem(LS_LINKS,JSON.stringify(store.links));
+  const saveTheme=()=>localStorage.setItem(LS_THEME,JSON.stringify(store.theme));
+
+  /* IndexedDB for photos and clips */
+  function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('site-edits',1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('media');
+    r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+  async function putMedia(k,blob){const db=await idb();return new Promise((res,rej)=>{
+    const tx=db.transaction('media','readwrite');tx.objectStore('media').put(blob,k);
+    tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
+  async function clearMedia(){const db=await idb();return new Promise(res=>{
+    const tx=db.transaction('media','readwrite');tx.objectStore('media').clear();tx.oncomplete=res})}
+  async function delMedia(k){const db=await idb();return new Promise(res=>{
+    const tx=db.transaction('media','readwrite');tx.objectStore('media').delete(k);tx.oncomplete=res})}
+  async function getMedia(k){const db=await idb();return new Promise(res=>{
+    const rq=db.transaction('media').objectStore('media').get(k);
+    rq.onsuccess=()=>res(rq.result);rq.onerror=()=>res(null)})}
+  async function eachMedia(cb){const db=await idb();const tx=db.transaction('media');
+    tx.objectStore('media').openCursor().onsuccess=e=>{const c=e.target.result;if(c){cb(c.key,c.value);c.continue()}}}
+
+  /* iPhone HEIC photos: browsers can't display them, so the server converts them to
+     JPEG. It used to be done here with a bundled library, but that library is LGPL
+     and can't ride along inside a paid template. */
+  const isHeic=b=>/heic|heif/i.test(b.type)||/\.hei[cf]$/i.test(b.name||'');
+  async function normalizeBlob(blob){
+    if(!isHeic(blob))return blob;
+    const r=await fetch('/convert-image',{method:'POST',body:blob});
+    if(!r.ok)throw new Error(await r.text());
+    return await r.blob();
+  }
+
+  /* iPhone HEVC clips the browser can't decode get transcoded by the local server */
+  const converting=new Set();
+  async function convertVideo(fig,blob){
+    const mid=fig.dataset.mid;
+    if(converting.has(mid))return;
+    converting.add(mid);
+    const b=fig.querySelector('.mrep');const label=b&&b.textContent;
+    if(b)b.textContent='converting video…';
+    try{
+      const r=await fetch('/convert-video',{method:'POST',body:blob});
+      if(!r.ok)throw new Error(await r.text());
+      const mp4=await r.blob();
+      applyMedia(fig,mp4);
+      await putMedia(mid,mp4);
+      markFilled(fig);
+    }catch(e){console.warn('video convert failed for',mid,e)}
+    finally{converting.delete(mid);if(b&&label)b.textContent=label}
+  }
+  function applyMedia(fig,blob){
+    const url=URL.createObjectURL(blob);
+    const old=fig.querySelector('img,video,iframe');
+    if(!old)return;
+    if(fig.classList.contains('exvid')){
+      if(embedFor(fig.dataset.mid))return;
+      if(blob.type.startsWith('video')){
+        const v=exampleVideo(url);
+        v.addEventListener('error',()=>{
+          if(v.error&&(v.error.code===3||v.error.code===4))convertVideo(fig,blob);
+        });
+        old.replaceWith(v);
+      }
+      return;
+    }
+    if(blob.type.startsWith('video')){
+      const v=document.createElement('video');
+      v.dataset.msrc=url;v.muted=true;v.loop=true;v.playsInline=true;
+      v.setAttribute('muted','');v.setAttribute('playsinline','');v.setAttribute('loop','');
+      /* only videos on the visible tab hold a decoder; hidden ones stay unloaded */
+      const grid=fig.closest('.niche-grid');
+      if(!grid||!grid.hidden){v.src=url;v.autoplay=true;v.setAttribute('autoplay','')}
+      v.addEventListener('error',()=>{
+        if(v.error&&(v.error.code===3||v.error.code===4))convertVideo(fig,blob);
+      });
+      old.replaceWith(v);
+    } else if(old.tagName==='VIDEO'){
+      const im=document.createElement('img');im.loading='lazy';im.decoding='async';im.src=url;im.alt='';old.replaceWith(im);
+    } else old.src=url;
+  }
+
+  /* baked edits live in the site's own files; browser storage rides on top as the newest layer */
+  let bakedCache={text:{},style:{},media:{},links:{},theme:{},setup:{}};
+  const dirtyMedia=new Set();
+
+  /* ---- theme: three chosen colours drive every CSS variable the page uses ---- */
+  function hexToRgb(hex){
+    const h=String(hex||'').replace('#','');
+    const n=h.length===3?h.split('').map(c=>c+c).join(''):h;
+    if(!/^[0-9a-f]{6}$/i.test(n))return null;
+    const i=parseInt(n,16);return [(i>>16)&255,(i>>8)&255,i&255];
+  }
+  const rgbaStr=(hex,a)=>{const c=hexToRgb(hex);return c?`rgba(${c[0]},${c[1]},${c[2]},${a})`:''};
+  const mixWhite=(hex,amt)=>{const c=hexToRgb(hex);if(!c)return '';
+    return '#'+c.map(v=>Math.round(v+(255-v)*amt).toString(16).padStart(2,'0')).join('')};
+  function applyTheme(t){
+    if(!t)return;
+    const r=document.documentElement.style;
+    if(t.ground){r.setProperty('--butter',t.ground);r.setProperty('--t-ground',t.ground)}
+    if(t.accent){r.setProperty('--yellow',t.accent);r.setProperty('--t-accent',t.accent)}
+    if(t.dark&&hexToRgb(t.dark)){
+      r.setProperty('--brown',t.dark);
+      r.setProperty('--t-dark',t.dark);
+      r.setProperty('--brown-soft',mixWhite(t.dark,.28));
+      r.setProperty('--t-soft',mixWhite(t.dark,.28));
+      r.setProperty('--rule',rgbaStr(t.dark,.2));
+      r.setProperty('--dim',rgbaStr(t.dark,.66));
+    }
+  }
+  /* social icons and the mail button are links, not text — they need their own layer */
+  function applyLinks(l){
+    if(!l)return;
+    ['tiktok','instagram'].forEach(k=>{
+      document.querySelectorAll('[data-social="'+k+'"]').forEach(a=>{
+        if(l[k]){a.href=l[k];a.hidden=false}
+        else if(l[k]==='')a.hidden=true;      /* explicitly cleared: hide the icon */
+      });
+    });
+    if(l.email){
+      const who=(document.querySelector('[data-field="name"]')||{}).textContent||'';
+      const subject=who.trim()?'Brief for '+who.trim():'Brief';
+      document.querySelectorAll('a.mail').forEach(a=>{
+        a.href='mailto:'+l.email+'?subject='+encodeURIComponent(subject);
+      });
+    }
+  }
+  /* ---- section order: the owner drags the page into the shape they want ---- */
+  const SECTIONS=[
+    {id:'about',      label:'About'},
+    {id:'brandstrip', label:'Brands'},
+    {id:'work',       label:'Work'},
+    {id:'gallery',    label:'Gallery'},
+    {id:'contact',    label:'Contact'},
+    {id:'rates',      label:'Rates'},
+    {id:'stats',      label:'Stats'},
+    {id:'reviews',    label:'Reviews'},
+    {id:'examples',   label:'Brand work'}
+  ];
+  /* the three newcomers ship switched off — a buyer turns on what fits their pitch */
+  const DEFAULT_HIDDEN=['rates','stats','reviews','examples'];
+  function hiddenList(){
+    return store.hidden||(bakedCache&&Array.isArray(bakedCache.hidden)?bakedCache.hidden:null)||DEFAULT_HIDDEN;
+  }
+  function applyHidden(){
+    const h=hiddenList();
+    SECTIONS.forEach(o=>{
+      const el=document.getElementById(o.id);
+      if(el)el.hidden=h.includes(o.id);
+      const a=document.querySelector('nav a[href="#'+o.id+'"]');
+      if(a)a.style.display=h.includes(o.id)?'none':'';
+    });
+  }
+  const saveHidden=(h)=>{store.hidden=h;localStorage.setItem(LS_HIDDEN,JSON.stringify(h));schedulePublish()};
+
+  /* section tones: each section wears one of the three palette colours */
+  const DEFAULT_TONES={about:'ground',brandstrip:'ground',work:'dark',gallery:'ground',
+                       contact:'accent',rates:'ground',stats:'dark',reviews:'ground',examples:'ground'};
+  const TONE_CYCLE=['ground','accent','dark'];
+  const toneOf=id=>(store.tones&&store.tones[id])||(bakedCache.tones&&bakedCache.tones[id])||DEFAULT_TONES[id]||'ground';
+  function applyTones(){
+    SECTIONS.forEach(o=>{
+      const el=document.getElementById(o.id);
+      if(!el)return;
+      TONE_CYCLE.forEach(t=>el.classList.remove('tone-'+t));
+      el.classList.add('tone-'+toneOf(o.id));
+    });
+  }
+  const saveTones=()=>{localStorage.setItem(LS_TONES,JSON.stringify(store.tones||{}));schedulePublish()};
+
+  /* the owner's choice to say 'this site is a template' — off unless they turn it on,
+     and inert until the shop URL exists */
+  const creditOn=()=>store.credit!==null?store.credit:!!bakedCache.credit;
+  function applyCredit(){
+    const old=document.getElementById('creditLine');
+    if(old)old.remove();
+    if(!STORE_URL||!creditOn())return;
+    const a=document.createElement('a');
+    a.id='creditLine';a.href=STORE_URL;a.target='_blank';a.rel='noopener';
+    a.textContent='✦ this site is a template — get yours';
+    document.querySelector('footer').appendChild(a);
+  }
+  const DEFAULT_ORDER=SECTIONS.map(s=>s.id);
+  /* where sections sit before the owner ever reorders: numbers and rates support the
+     introduction; finished ads and kind words follow the work they prove */
+  const DEFAULT_LAYOUT=['about','stats','rates','brandstrip','work','examples','reviews','gallery','contact'];
+  /* drop anything unrecognised and re-add anything missing, so a stale saved order
+     can never lose a section off the page */
+  function cleanOrder(list){
+    const ids=(Array.isArray(list)?list:[]).filter(id=>DEFAULT_ORDER.includes(id));
+    const full=[...new Set(ids)].concat(DEFAULT_LAYOUT.filter(id=>!ids.includes(id)));
+    /* contact is the page's full stop — it always sits at the bottom, so a stray
+       drag or an old saved order can never leave the sign-off in the middle */
+    return full.filter(id=>id!=='contact').concat('contact');
+  }
+  function applyOrder(list){
+    const order=cleanOrder(list), footer=document.querySelector('footer'), nav=document.querySelector('nav');
+    order.forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)document.body.insertBefore(el,footer);          /* re-stack above the footer */
+      const a=nav&&nav.querySelector('a[href="#'+id+'"]');
+      if(a)nav.appendChild(a);                              /* menu follows the page */
+    });
+    return order;
+  }
+  const saveOrder=()=>localStorage.setItem(LS_ORDER,JSON.stringify(store.order));
+
+  applyHidden();
+  applyTones();
+  applyTheme(store.theme);          /* local edits paint before the server file arrives */
+  applyLinks(store.links);
+  applyOrder(store.order&&store.order.length?store.order:DEFAULT_LAYOUT);
+
+  function applyTextStyle(map,styleMap){
+    Object.entries(map).forEach(([eid,htmlStr])=>{
+      const el=document.querySelector('[data-eid="'+eid+'"]');if(el)el.innerHTML=htmlStr;
+    });
+    Object.entries(styleMap).forEach(([eid,s])=>{
+      const el=document.querySelector('[data-eid="'+eid+'"]');if(!el)return;
+      if(s.ff)el.style.fontFamily=s.ff;
+      if(s.fs)el.style.fontSize=s.fs+'px';
+    });
+  }
+  /* Pasted video links for the brand-examples slots. Only two hosts, both by name:
+     an allow-list is what keeps a pasted link from becoming an injection point.
+     YouTube goes through its no-cookie player so a visitor isn't tracked for
+     watching a portfolio. */
+  function embedSrc(raw){
+    let u;
+    try{u=new URL(String(raw).trim())}catch(e){return null}
+    const host=u.hostname.replace(/^www\./,'');
+    if(host==='youtu.be')return 'https://www.youtube-nocookie.com/embed/'+encodeURIComponent(u.pathname.slice(1).split('/')[0]);
+    if(host==='youtube.com'||host==='m.youtube.com'){
+      if(u.pathname.startsWith('/shorts/'))return 'https://www.youtube-nocookie.com/embed/'+encodeURIComponent(u.pathname.split('/')[2]||'');
+      const id=u.searchParams.get('v');
+      return id?'https://www.youtube-nocookie.com/embed/'+encodeURIComponent(id):null;
+    }
+    if(host==='vimeo.com'){
+      const id=u.pathname.split('/').filter(Boolean)[0];
+      return /^\d+$/.test(id||'')?'https://player.vimeo.com/video/'+id:null;
+    }
+    return null;
+  }
+  const embedFor=mid=>store.embeds[mid]||(bakedCache.embeds&&bakedCache.embeds[mid])||'';
+  function applyEmbeds(){
+    document.querySelectorAll('.exvid').forEach(fig=>{
+      const raw=embedFor(fig.dataset.mid);
+      const old=fig.querySelector('img,video,iframe');
+      if(!raw||!old)return;
+      const src=embedSrc(raw);
+      if(!src)return;
+      const f=document.createElement('iframe');
+      f.src=src;f.loading='lazy';f.allowFullscreen=true;
+      f.setAttribute('allow','fullscreen; picture-in-picture; encrypted-media');
+      f.title='Brand example video';
+      old.replaceWith(f);
+      fig.dataset.filled='1';
+    });
+    updateWork();
+  }
+
+  /* brand-example videos exist to be heard: native controls, no autoplay, no mute.
+     Everything else on the page stays a silent ambient loop. */
+  function exampleVideo(src){
+    const v=document.createElement('video');
+    v.src=src;v.controls=true;v.playsInline=true;v.preload='metadata';
+    v.setAttribute('playsinline','');v.setAttribute('controls','');v.setAttribute('preload','metadata');
+    return v;
+  }
+  function setDefaultMedia(fig,path){
+    const url=path;
+    const old=fig.querySelector('img,video,iframe');
+    if(!old)return;
+    if(fig.classList.contains('exvid')){
+      if(embedFor(fig.dataset.mid))return;      /* a pasted link outranks the upload */
+      if(/\.(mp4|mov|webm)$/i.test(path)){old.replaceWith(exampleVideo(url));fig.dataset.filled='1';updateWork()}
+      return;
+    }
+    if(/\.(mp4|mov|webm)$/i.test(path)){
+      const v=document.createElement('video');
+      v.dataset.msrc=url;v.muted=true;v.loop=true;v.playsInline=true;
+      v.setAttribute('muted','');v.setAttribute('playsinline','');v.setAttribute('loop','');
+      const grid=fig.closest('.niche-grid');
+      if(!grid||!grid.hidden){v.src=url;v.autoplay=true;v.setAttribute('autoplay','')}
+      old.replaceWith(v);
+    } else if(old.tagName==='VIDEO'){
+      const im=document.createElement('img');im.loading='lazy';im.decoding='async';im.src=url;im.alt='';old.replaceWith(im);
+    } else old.src=url;
+    if(fig.classList.contains('clip')){fig.dataset.filled='1'}
+    updateWork();
+  }
+  /* where the big name sits over the film: left (the original), centre, or right.
+     Mobile ignores this and stays centred — there's no horizontal room to spend. */
+  const HERO_POS=['left','center','right'];
+  const heroPos=()=>store.heroPos||(bakedCache.heroPos&&HERO_POS.includes(bakedCache.heroPos)?bakedCache.heroPos:'left');
+  function applyHeroPos(){
+    const n=document.getElementById('name');
+    if(!n)return;
+    n.classList.remove('pos-center','pos-right');
+    const p=heroPos();
+    if(p!=='left')n.classList.add('pos-'+p);
+    const b=document.getElementById('heroPosBtn');
+    if(b)b.textContent='⇆ name: '+(p==='center'?'centre':p);
+    document.querySelectorAll('#namePosSeg button').forEach(sb=>sb.setAttribute('aria-pressed',String(sb.dataset.pos===p)));
+  }
+  applyHeroPos();
+  const namePosSeg=document.getElementById('namePosSeg');
+  if(namePosSeg)namePosSeg.addEventListener('click',e=>{
+    const b=e.target.closest('button');
+    if(!b)return;
+    store.heroPos=b.dataset.pos;
+    localStorage.setItem(LS_HEROPOS,b.dataset.pos);
+    applyHeroPos();schedulePublish();
+  });
+  applyEmbeds();   /* local-layer links; must run after the embed helpers exist */
+  applyCredit();
+  fetch('assets/user/baked.json',{cache:'no-cache'})
+    .then(r=>r.ok?r.json():null).catch(()=>null)
+    .then(baked=>{
+      if(baked){
+        bakedCache={text:baked.text||{},style:baked.style||{},media:baked.media||{},brands:baked.brands||null,
+                    links:baked.links||{},theme:baked.theme||{},setup:baked.setup||{},order:baked.order||null,
+                    stickers:Array.isArray(baked.stickers)?baked.stickers:null,
+                    niches:Array.isArray(baked.niches)?baked.niches:null,
+                    hidden:Array.isArray(baked.hidden)?baked.hidden:null,
+                    embeds:baked.embeds||{},tones:baked.tones||{},exSlots:Number(baked.exSlots)||null,
+                    credit:!!baked.credit,heroPos:baked.heroPos||null};
+        applyCredit();
+        applyHeroPos();
+        applyHidden();
+        applyTones();
+        applyEmbeds();
+        if(bakedCache.stickers&&!store.stickers)store.stickers=bakedCache.stickers;
+        if(bakedCache.order)applyOrder(bakedCache.order);
+        applyTheme(bakedCache.theme);
+        resolveNiches();renderNiches();
+        resolveExamples();renderExamples();
+        applyTextStyle(bakedCache.text,bakedCache.style);
+        applyLinks(bakedCache.links);   /* after the text: the mail subject uses the name */
+        Object.entries(bakedCache.media).forEach(([mid,p])=>{
+          const fig=document.querySelector('[data-mid="'+mid+'"]');if(fig)setDefaultMedia(fig,p);
+        });
+        if(bakedCache.setup.name)document.title=bakedCache.setup.name+(bakedCache.setup.titleSuffix||' | UGC');
+      }
+      applyOrder(store.order&&store.order.length?store.order:(bakedCache.order||DEFAULT_LAYOUT));
+      applyTheme(store.theme);
+      applyTextStyle(store.text,store.style);
+      applyLinks(store.links);
+      renderSecList();
+      renderStickers();
+      /* a freshly deployed site tells whoever's looking how to bring it to life;
+         the strip disappears for good the moment setup completes */
+      if(!(baked&&baked.setup&&baked.setup.done)){
+        const bar=document.createElement('div');
+        bar.id='setupBanner';
+        bar.innerHTML='This site hasn\'t been set up yet — the owner signs in at <a href="/admin">/admin</a> to start.';
+        document.body.appendChild(bar);
+      }
+      maybeOpenWizard(baked);
+      const localBrands=localStorage.getItem('site-brands');
+      if(localBrands){try{brands=JSON.parse(localBrands)}catch(e){}}
+      else if(bakedCache.brands)brands=bakedCache.brands;
+      brands=(Array.isArray(brands)?brands:[]).filter(b=>b&&b.id);
+      renderBrands();
+    });
+
+  /* brand strip: logo circles, flick / auto / drift modes, logos uploaded in edit mode */
+  let brands=[];               /* [{id}] — logo images live under media key 'br-<id>' */
+  const brandImgUrls={};       /* id -> live object URL (IDB uploads this session) */
+  let currentBrandId=null;
+  const saveBrands=()=>{localStorage.setItem('site-brands',JSON.stringify(brands));if(typeof schedulePublish==='function')schedulePublish()};
+  const brandLogoUrl=b=>brandImgUrls[b.id]||(bakedCache.media&&bakedCache.media['br-'+b.id])||null;
+  const bRow=document.getElementById('bRow');
+  const strip=document.getElementById('brandstrip');
+
+  function renderBrands(){
+    if(!bRow)return;
+    const editing=html.classList.contains('editing');
+    bRow.innerHTML='';
+    const shown=brands.filter(b=>brandLogoUrl(b)||editing);
+    strip.style.display=(shown.length||editing)?'':'none';
+    if(!shown.length&&!editing)return;
+    const buildChip=b=>{
+      const url=brandLogoUrl(b);
+      const chip=document.createElement('span');
+      chip.className='bchip'+(url?'':' empty');
+      if(url){const im=document.createElement('img');im.src=url;im.alt='Brand logo';chip.appendChild(im)}
+      else chip.textContent='+';
+      if(editing){
+        chip.style.cursor='pointer';
+        chip.title=url?'Replace logo':'Upload logo';
+        chip.addEventListener('click',e=>{
+          if(e.target.classList.contains('bx'))return;
+          currentBrandId=b.id;filePick.accept='image/*';filePick.click();
+        });
+        const x=document.createElement('button');
+        x.type='button';x.className='bx';x.textContent='×';x.setAttribute('aria-label','Remove brand');
+        x.addEventListener('click',()=>{brands=brands.filter(o=>o.id!==b.id);saveBrands();renderBrands()});
+        chip.appendChild(x);
+      }
+      return chip;
+    };
+    const buildSet=hidden=>{
+      const set=document.createElement('div');
+      set.className='bset';
+      if(hidden)set.setAttribute('aria-hidden','true');
+      shown.forEach(b=>set.appendChild(buildChip(b)));
+      return set;
+    };
+    if(editing){
+      const set=buildSet(false);
+      const add=document.createElement('span');
+      add.className='bchip empty';add.textContent='+';add.title='Add brand logo';
+      add.addEventListener('click',()=>{
+        const id='b'+Date.now().toString(36)+Math.floor(Math.random()*46656).toString(36);
+        brands.push({id});saveBrands();renderBrands();
+        currentBrandId=id;filePick.accept='image/*';filePick.click();
+      });
+      set.appendChild(add);
+      bRow.appendChild(set);
+      return;
+    }
+    /* drift: repeat the set until one half fills the screen, then mirror it for a seamless loop */
+    bRow.appendChild(buildSet(false));
+    const setW=bRow.scrollWidth||1;
+    const copies=Math.max(1,Math.ceil((innerWidth*1.2)/setW));
+    for(let k=1;k<copies*2;k++)bRow.appendChild(buildSet(true));
+    bHalfW=setW*copies;bX=0;
+  }
+  /* smooth drift engine: eases to a stop on hover, glides back on leave — no snapping */
+  let bHalfW=0,bX=0,bSpeed=38,bTargetSpeed=38,bLastT=null;
+  const bReduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById('bViewport').addEventListener('mouseenter',()=>{bTargetSpeed=0});
+  document.getElementById('bViewport').addEventListener('mouseleave',()=>{bTargetSpeed=38});
+  (function bTick(t){
+    if(!bReduced){
+      if(bLastT!=null&&bHalfW>0&&!html.classList.contains('editing')&&!document.hidden){
+        const dt=Math.min(.1,(t-bLastT)/1000);
+        bSpeed+=(bTargetSpeed-bSpeed)*Math.min(1,dt*5);
+        bX-=bSpeed*dt;
+        if(-bX>=bHalfW)bX+=bHalfW;
+        bRow.style.transform='translateX('+bX+'px)';
+      }
+      bLastT=t;
+      requestAnimationFrame(bTick);
+    }
+  })(performance.now());
+  addEventListener('resize',()=>{if(!html.classList.contains('editing'))renderBrands()});
+  renderBrands();
+  /* a work slot only shows to visitors once it holds a real clip */
+  function markFilled(fig){
+    if(fig.classList.contains('clip')){fig.dataset.filled='1';updateWork()}
+  }
+  function updateWork(){
+    document.querySelectorAll('.niche-grid,#examples .wrap').forEach(g=>{
+      const note=g.querySelector('.empty-note');
+      if(note)note.hidden=!!g.querySelector('.clip[data-filled]');
+    });
+  }
+  updateWork();
+
+
+  /* ---------- niches: the Work tabs, owner-shaped ----------
+     Each niche is {id,label,n}: id keys the media slots (c-<id>-<i>) and never
+     changes after creation, so renaming a tab keeps every clip already in it.
+     The list ships as four examples that are obviously meant to be replaced. */
+  const DEFAULT_NICHES=[
+    {id:'top',      label:'Top videos',       n:8},
+    {id:'skincare', label:'Skincare',         n:4},
+    {id:'home',     label:'Home & lifestyle', n:4},
+    {id:'food',     label:'Food',             n:4}
+  ];
+  const MAX_NICHES=8, MAX_SLOTS=16;
+  let niches=null, activeNiche='top';
+  const slug=t=>String(t).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'niche';
+  const saveNiches=()=>{store.niches=niches;localStorage.setItem(LS_NICHES,JSON.stringify(niches));schedulePublish()};
+
+  function resolveNiches(){
+    let list=store.niches||(bakedCache.niches&&bakedCache.niches.length?bakedCache.niches:null)||DEFAULT_NICHES;
+    list=list.map(o=>({id:String(o.id),label:String(o.label||o.id),n:Math.min(MAX_SLOTS,Math.max(1,Number(o.n)||4))}));
+    /* uploads must never vanish: any slot media whose niche isn't in the list brings
+       its niche back, and a niche always shows at least as many slots as it has clips */
+    const have=new Set(list.map(o=>o.id));
+    Object.keys(bakedCache.media||{}).forEach(k=>{
+      const m=/^c-(.+)-(\d+)$/.exec(k);
+      if(!m)return;
+      const hit=list.find(o=>o.id===m[1]);
+      if(hit){if(Number(m[2])>=hit.n)hit.n=Math.min(MAX_SLOTS,Number(m[2])+1)}
+      else if(!have.has(m[1])&&list.length<MAX_NICHES){
+        have.add(m[1]);
+        list.push({id:m[1],label:m[1].replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),n:Math.max(4,Number(m[2])+1)});
+      }
+    });
+    niches=list;
+  }
+
+  function renderNiches(){
+    const tabsEl=document.getElementById('nicheTabs'), gridsEl=document.getElementById('nicheGrids');
+    if(!tabsEl||!gridsEl)return;
+    if(!niches)resolveNiches();
+    if(!niches.find(o=>o.id===activeNiche))activeNiche=niches[0].id;
+    const editing=html.classList.contains('editing');
+    tabsEl.innerHTML='';gridsEl.innerHTML='';
+    niches.forEach(o=>{
+      const wrap=document.createElement('span');wrap.className='ntab-wrap';wrap.dataset.id=o.id;
+      const b=document.createElement('button');
+      b.type='button';b.className='ntab-lbl';b.setAttribute('role','tab');
+      b.textContent=o.label;
+      b.setAttribute('aria-selected',String(o.id===activeNiche));
+      if(editing)b.contentEditable='true';
+      const x=document.createElement('button');
+      x.type='button';x.className='nx';x.textContent='×';
+      x.setAttribute('aria-label','Remove the '+o.label+' niche');
+      wrap.append(b,x);
+      tabsEl.appendChild(wrap);
+    });
+    const add=document.createElement('button');
+    add.type='button';add.className='nadd';add.textContent='+ niche';
+    add.title='Add a niche';add.setAttribute('aria-label','Add a niche');
+    if(niches.length>=MAX_NICHES)add.disabled=true;
+    tabsEl.appendChild(add);
+
+    niches.forEach(o=>{
+      const g=document.createElement('div');
+      g.className='grid niche-grid';g.dataset.niche=o.id;g.hidden=o.id!==activeNiche;
+      for(let i=0;i<o.n;i++){
+        const fig=document.createElement('figure');fig.className='clip';fig.dataset.mid='c-'+o.id+'-'+i;
+        const img=document.createElement('img');img.loading='lazy';
+        img.src='assets/placeholder/c-'+String(i%8+1).padStart(2,'0')+'.jpg';img.alt='';
+        const tag=document.createElement('span');tag.className='tag';tag.textContent='Sample';
+        const meta=document.createElement('figcaption');
+        meta.className='meta';meta.dataset.eid='m-'+o.id+'-'+i;
+        meta.textContent=o.label+' '+String(i+1).padStart(2,'0');
+        /* the caption stays visible on a filled slot, so its default has to read as a
+           caption template, never as a status — 'coming soon' under a real clip lied */
+        const sub=document.createElement('span');sub.textContent='niche / brand';
+        meta.appendChild(sub);
+        if(editing)meta.contentEditable='true';
+        fig.append(img,tag,meta);
+        g.appendChild(fig);
+      }
+      if(o.n<MAX_SLOTS){
+        const more=document.createElement('button');
+        more.type='button';more.className='addslots';more.dataset.id=o.id;more.dataset.act='more';
+        const plus=document.createElement('b');plus.textContent='＋';
+        more.append(plus,document.createTextNode('4 more slots'));
+        g.appendChild(more);
+      }
+      if(o.n>4){
+        const less=document.createElement('button');
+        less.type='button';less.className='addslots';less.dataset.id=o.id;less.dataset.act='less';
+        const minus=document.createElement('b');minus.textContent='−';
+        less.append(minus,document.createTextNode('remove empty slots'));
+        g.appendChild(less);
+      }
+      const note=document.createElement('p');
+      note.className='empty-note caslon';note.hidden=true;
+      note.textContent=o.label+' clips are on their way x';
+      g.appendChild(note);
+      gridsEl.appendChild(g);
+    });
+    /* stored media back onto the fresh slots: the published layer, then this
+       browser's local layer on top */
+    gridsEl.querySelectorAll('[data-mid]').forEach(fig=>{
+      const mid=fig.dataset.mid;
+      if(bakedCache.media&&bakedCache.media[mid])setDefaultMedia(fig,bakedCache.media[mid]);
+      getMedia(mid).then(bl=>{if(bl&&!isHeic(bl)){applyMedia(fig,bl);markFilled(fig)}});
+    });
+    /* saved caption edits */
+    applyTextStyle({...bakedCache.text,...store.text},{...bakedCache.style,...store.style});
+    syncMediaButtons(editing);
+    updateWork();
+    syncVideoPlayback();
+  }
+  function setActiveNiche(id){
+    activeNiche=id;
+    document.querySelectorAll('#nicheTabs .ntab-wrap').forEach(w=>{
+      w.querySelector('.ntab-lbl').setAttribute('aria-selected',String(w.dataset.id===id));
+    });
+    document.querySelectorAll('.niche-grid').forEach(g=>{g.hidden=g.dataset.niche!==id});
+    syncVideoPlayback();
+  }
+  document.getElementById('nicheTabs').addEventListener('click',e=>{
+    const nx=e.target.closest('.nx');
+    if(nx){
+      const id=nx.parentElement.dataset.id;
+      const o=niches.find(x=>x.id===id);
+      if(niches.length<=1){alert('Keep at least one niche.');return}
+      if(!confirm('Remove "'+o.label+'"? Anything uploaded to it stays saved.'))return;
+      niches=niches.filter(x=>x.id!==id);
+      saveNiches();renderNiches();
+      return;
+    }
+    if(e.target.closest('.nadd')){
+      if(niches.length>=MAX_NICHES)return;
+      let id=slug('new niche'), k=2;
+      while(niches.find(x=>x.id===id))id=slug('new niche')+'-'+(k++);
+      niches=[...niches,{id,label:'New niche',n:4}];
+      saveNiches();
+      activeNiche=id;
+      renderNiches();
+      const b=document.querySelector('#nicheTabs .ntab-wrap[data-id="'+id+'"] .ntab-lbl');
+      if(b&&html.classList.contains('editing')){b.focus();getSelection().selectAllChildren(b)}
+      return;
+    }
+    const lbl=e.target.closest('.ntab-lbl');
+    if(lbl)setActiveNiche(lbl.parentElement.dataset.id);
+  });
+  document.getElementById('nicheTabs').addEventListener('input',e=>{
+    const lbl=e.target.closest('.ntab-lbl');
+    if(!lbl)return;
+    const o=niches.find(x=>x.id===lbl.parentElement.dataset.id);
+    if(o&&lbl.textContent.trim()){o.label=lbl.textContent.trim();saveNiches()}
+  });
+  document.getElementById('nicheTabs').addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&e.target.closest('.ntab-lbl')){e.preventDefault();e.target.blur()}
+  });
+  document.getElementById('nicheTabs').addEventListener('focusout',e=>{
+    const lbl=e.target.closest&&e.target.closest('.ntab-lbl');
+    if(!lbl)return;
+    const o=niches.find(x=>x.id===lbl.parentElement.dataset.id);
+    if(o&&!lbl.textContent.trim()){lbl.textContent=o.label}   /* a tab can't be nameless */
+  });
+  document.getElementById('nicheGrids').addEventListener('click',e=>{
+    const btn=e.target.closest('.addslots');
+    if(!btn)return;
+    const o=niches.find(x=>x.id===btn.dataset.id);
+    if(!o)return;
+    if(btn.dataset.act==='less'){
+      /* only empty trailing slots go — a slot holding a clip is never removed */
+      let highest=-1;
+      for(let i=0;i<o.n;i++){
+        const mid='c-'+o.id+'-'+i;
+        const fig=document.querySelector('[data-mid="'+mid+'"]');
+        if((bakedCache.media&&bakedCache.media[mid])||(fig&&fig.dataset.filled))highest=i;
+      }
+      const floor=Math.max(4,highest+1);
+      if(floor>=o.n){alert('Those slots have clips in them — nothing empty to remove.');return}
+      o.n=Math.max(floor,o.n-4);
+    } else {
+      o.n=Math.min(MAX_SLOTS,o.n+4);
+    }
+    saveNiches();renderNiches();
+  });
+  resolveNiches();renderNiches();
+  /* ---------- brand-example slots: grow and shrink like the niches ---------- */
+  const EX_MIN=3, EX_MAX=12;
+  let exSlots=null;
+  const saveExSlots=()=>{store.exSlots=exSlots;localStorage.setItem(LS_EXSLOTS,String(exSlots));schedulePublish()};
+  function resolveExamples(){
+    let n=store.exSlots||bakedCache.exSlots||6;
+    /* a slot holding an upload or a pasted link always stays on the page */
+    const keys=[...Object.keys(bakedCache.media||{}),...Object.keys(bakedCache.embeds||{}),...Object.keys(store.embeds||{})];
+    keys.forEach(k=>{const m=/^e-(\d+)$/.exec(k);if(m&&Number(m[1])>=n)n=Number(m[1])+1});
+    exSlots=Math.min(EX_MAX,Math.max(EX_MIN,n));
+  }
+  function exFilled(i){
+    const mid='e-'+i;
+    const fig=document.querySelector('[data-mid="'+mid+'"]');
+    return !!((bakedCache.media&&bakedCache.media[mid])||embedFor(mid)||(fig&&fig.dataset.filled));
+  }
+  function renderExamples(){
+    const grid=document.querySelector('#examples .exgrid');
+    if(!grid)return;
+    if(!exSlots)resolveExamples();
+    const editing=html.classList.contains('editing');
+    grid.innerHTML='';
+    for(let i=0;i<exSlots;i++){
+      const fig=document.createElement('figure');
+      fig.className='clip exvid';fig.dataset.mid='e-'+i;
+      const img=document.createElement('img');img.loading='lazy';
+      img.src='assets/placeholder/c-'+String(i%8+1).padStart(2,'0')+'.jpg';img.alt='';
+      const meta=document.createElement('figcaption');
+      meta.className='meta';meta.dataset.eid='ex-'+i+'-cap';
+      meta.textContent='Brand name';
+      const sub=document.createElement('span');sub.textContent='what it was for';
+      meta.appendChild(sub);
+      if(editing)meta.contentEditable='true';
+      fig.append(img,meta);
+      grid.appendChild(fig);
+    }
+    if(exSlots<EX_MAX){
+      const more=document.createElement('button');
+      more.type='button';more.className='addslots';more.dataset.act='more';
+      const plus=document.createElement('b');plus.textContent='＋';
+      more.append(plus,document.createTextNode('3 more slots'));
+      grid.appendChild(more);
+    }
+    if(exSlots>EX_MIN){
+      const less=document.createElement('button');
+      less.type='button';less.className='addslots';less.dataset.act='less';
+      const minus=document.createElement('b');minus.textContent='−';
+      less.append(minus,document.createTextNode('remove empty slots'));
+      grid.appendChild(less);
+    }
+    grid.querySelectorAll('[data-mid]').forEach(fig=>{
+      const mid=fig.dataset.mid;
+      if(bakedCache.media&&bakedCache.media[mid])setDefaultMedia(fig,bakedCache.media[mid]);
+      getMedia(mid).then(bl=>{if(bl&&bl.type&&bl.type.startsWith('video')){applyMedia(fig,bl);markFilled(fig)}});
+    });
+    applyEmbeds();
+    applyTextStyle({...bakedCache.text,...store.text},{...bakedCache.style,...store.style});
+    syncMediaButtons(editing);
+    updateWork();
+  }
+  document.querySelector('#examples .exgrid').addEventListener('click',e=>{
+    const btn=e.target.closest('.addslots');
+    if(!btn)return;
+    if(btn.dataset.act==='less'){
+      let highest=-1;
+      for(let i=0;i<exSlots;i++)if(exFilled(i))highest=i;
+      const floor=Math.max(EX_MIN,highest+1);
+      if(floor>=exSlots){alert('Those slots have videos in them — nothing empty to remove.');return}
+      exSlots=Math.max(floor,exSlots-3);
+    } else {
+      exSlots=Math.min(EX_MAX,exSlots+3);
+    }
+    saveExSlots();renderExamples();
+  });
+  resolveExamples();renderExamples();
+
+  eachMedia(async(mid,blob)=>{
+    if(mid.startsWith('br-')){
+      brandImgUrls[mid.slice(3)]=URL.createObjectURL(blob);
+      renderBrands();
+      return;
+    }
+    const fig=document.querySelector('[data-mid="'+mid+'"]');
+    if(!fig)return;
+    if(isHeic(blob)){
+      /* one-time fix-up: convert stored iPhone photos and save the JPEG back;
+         if it can't convert, drop the entry so the page's default photo shows */
+      try{const j=await normalizeBlob(blob);applyMedia(fig,j);await putMedia(mid,j);markFilled(fig)}
+      catch(e){console.warn('HEIC convert failed for',mid,e);await delMedia(mid)}
+    } else {applyMedia(fig,blob);markFilled(fig)}
+  });
+
+  /* toggle */
+  function setEditing(on){
+    html.classList.toggle('editing',on);
+    editBtn.textContent=on?'✓ Done':'✎ Edit';
+    panel.hidden=!on;
+    spTarget.textContent='Click any text to style it';
+    currentEl=null;
+    document.querySelectorAll('[data-eid]').forEach(el=>{
+      el.contentEditable=on?'true':'false';
+      if(!on)el.blur();
+    });
+    renderBrands();
+    if(!on)selectSticker(null);
+    /* hero film swap lives on the hero itself — it isn't a [data-mid] slot */
+    let hb=document.getElementById('heroRep');
+    if(on&&!hb){
+      hb=document.createElement('button');
+      hb.type='button';hb.className='mrep';hb.id='heroRep';
+      hb.textContent=(window.__heroFilm&&window.__heroFilm.hasFilm())?'⇄ hero film':'＋ add your hero film';
+      hb.addEventListener('click',e=>{e.preventDefault();heroPick.click()});
+      document.querySelector('#hero .stick').appendChild(hb);
+      const pb=document.createElement('button');
+      pb.type='button';pb.className='mrep';pb.id='heroPosBtn';
+      pb.title='Move your name: left, centre or right (phones always centre it)';
+      pb.addEventListener('click',e=>{
+        e.preventDefault();
+        store.heroPos=HERO_POS[(HERO_POS.indexOf(heroPos())+1)%HERO_POS.length];
+        localStorage.setItem(LS_HEROPOS,store.heroPos);
+        applyHeroPos();schedulePublish();
+      });
+      document.querySelector('#hero .stick').appendChild(pb);
+      applyHeroPos();
+    } else if(!on&&hb){
+      hb.remove();
+      const pb=document.getElementById('heroPosBtn');
+      if(pb)pb.remove();
+    }
+    syncMediaButtons(on);
+    document.querySelectorAll('#nicheTabs .ntab-lbl').forEach(b=>{
+      b.contentEditable=on?'true':'false';
+      if(!on)b.blur();
+    });
+  }
+  function syncMediaButtons(on){
+    document.querySelectorAll('[data-mid]').forEach(fig=>{
+      const ex=fig.classList.contains('exvid');
+      let b=fig.querySelector('.mrep');
+      if(on&&!b){
+        b=document.createElement('button');
+        b.type='button';b.className='mrep';
+        b.textContent=ex?'⇄ video':(fig.classList.contains('clip')?'⇄ photo / video':'⇄ replace');
+        b.addEventListener('click',e=>{
+          e.stopPropagation();e.preventDefault();
+          currentMedia=fig;
+          filePick.accept=ex?'video/*':(fig.classList.contains('clip')?'image/*,video/*':'image/*');
+          filePick.click();
+        });
+        fig.appendChild(b);
+        if(ex){
+          const l=document.createElement('button');
+          l.type='button';l.className='mrep exlink';
+          l.style.top='52px';
+          l.textContent='🔗 link';
+          l.title='Show a YouTube or Vimeo video here instead of uploading';
+          l.addEventListener('click',e=>{
+            e.stopPropagation();e.preventDefault();
+            const mid=fig.dataset.mid;
+            const cur=embedFor(mid);
+            const raw=prompt('Paste a YouTube or Vimeo link (leave empty to remove):',cur);
+            if(raw===null)return;
+            if(raw.trim()&&!embedSrc(raw)){alert('That doesn\'t look like a YouTube or Vimeo link.');return}
+            store.embeds[mid]=raw.trim();
+            localStorage.setItem(LS_EMBEDS,JSON.stringify(store.embeds));
+            if(!raw.trim()){
+              /* back to the upload if there is one, else the placeholder */
+              const old=fig.querySelector('img,video,iframe');
+              const im=document.createElement('img');
+              im.src='assets/placeholder/c-0'+((Number(mid.slice(2))%8)+1)+'.jpg';im.alt='';
+              old.replaceWith(im);
+              delete fig.dataset.filled;
+              if(bakedCache.media&&bakedCache.media[mid])setDefaultMedia(fig,bakedCache.media[mid]);
+              getMedia(mid).then(bl=>{if(bl&&bl.type.startsWith('video')){applyMedia(fig,bl);markFilled(fig)}});
+              updateWork();
+            } else applyEmbeds();
+            schedulePublish();
+          });
+          fig.appendChild(l);
+        }
+      } else if(!on&&b){
+        b.remove();
+        const l=fig.querySelector('.exlink');
+        if(l)l.remove();
+      }
+    });
+  }
+  /* ---- hero film upload: the server runs ffmpeg and hands back a frame manifest.
+     Reported through onStatus so the edit button and the wizard can share it. ---- */
+  function uploadHero(file,onStatus){
+    return new Promise((resolve,reject)=>{
+      const xhr=new XMLHttpRequest();
+      xhr.open('POST','/hero-upload');
+      xhr.upload.onprogress=e=>{
+        if(e.lengthComputable)onStatus('uploading '+Math.round(e.loaded/e.total*100)+'%');
+      };
+      xhr.upload.onload=()=>onStatus('cutting your film… this can take a minute');
+      xhr.onload=()=>{
+        if(xhr.status===200){
+          let m=null;try{m=JSON.parse(xhr.responseText)}catch(e){}
+          onStatus('✓ film ready');resolve(m);
+        } else if(xhr.status===501){
+          reject(new Error('This server has no video tool installed, so it can\'t cut the film. (ffmpeg is missing.)'));
+        } else reject(new Error(xhr.responseText||('upload failed ('+xhr.status+')')));
+      };
+      xhr.onerror=()=>reject(new Error('upload failed — check your connection'));
+      xhr.send(file);
+    });
+  }
+  heroPick.addEventListener('change',async()=>{
+    const f=heroPick.files[0];heroPick.value='';
+    if(!f)return;
+    const hb=document.getElementById('heroRep');
+    const label=hb?hb.textContent:'';
+    const status=s=>{if(hb){hb.textContent=s;hb.dataset.busy='1'}};
+    try{
+      await uploadHero(f,status);
+      await window.__heroFilm.reload();
+      if(hb){hb.textContent='⇄ hero film';delete hb.dataset.busy}
+    }catch(err){
+      if(hb){hb.textContent=label;delete hb.dataset.busy}
+      alert(err.message);
+    }
+  });
+
+  /* edits publish automatically a moment after each change; Done also publishes immediately */
+  let baking=false,pubTimer=null;
+  function schedulePublish(){
+    clearTimeout(pubTimer);
+    pubTimer=setTimeout(()=>{if(baking){schedulePublish()}else bakeAll()},2500);
+  }
+  const btnLabel=()=>html.classList.contains('editing')?'✓ Done':'✎ Edit';
+  async function bakeAll(){
+    if(baking)return;baking=true;
+    const orig=btnLabel();
+    try{
+      const mids=[...dirtyMedia];
+      let failedMedia=0;
+      for(let i=0;i<mids.length;i++){
+        editBtn.textContent='saving media '+(i+1)+'/'+mids.length+'…';
+        const mid=mids[i];
+        const blob=await getMedia(mid);
+        if(!blob){dirtyMedia.delete(mid);continue}
+        try{
+          const r=await fetch('/save-media?key='+encodeURIComponent(mid)+'&type='+encodeURIComponent(blob.type),{method:'POST',body:blob});
+          if(!r.ok)throw new Error(await r.text());
+          const j=await r.json();
+          bakedCache.media[mid]=j.path;
+          dirtyMedia.delete(mid);
+        }catch(e){failedMedia++;console.warn('media save failed for',mid,e)}
+      }
+      editBtn.textContent='saving…';
+      bakedCache.text={...bakedCache.text,...store.text};
+      bakedCache.style={...bakedCache.style,...store.style};
+      bakedCache.links={...bakedCache.links,...store.links};
+      bakedCache.theme={...bakedCache.theme,...store.theme};
+      if(store.order&&store.order.length)bakedCache.order=cleanOrder(store.order);
+      if(store.stickers)bakedCache.stickers=store.stickers;
+      bakedCache.brands=brands;
+      bakedCache.niches=niches;
+      if(store.hidden)bakedCache.hidden=store.hidden;
+      if(store.tones)bakedCache.tones={...(bakedCache.tones||{}),...store.tones};
+      if(exSlots)bakedCache.exSlots=exSlots;
+      if(store.credit!==null)bakedCache.credit=store.credit;
+      if(store.heroPos)bakedCache.heroPos=store.heroPos;
+      bakedCache.embeds={...(bakedCache.embeds||{}),...store.embeds};
+      Object.keys(bakedCache.embeds).forEach(k=>{if(!bakedCache.embeds[k])delete bakedCache.embeds[k]});
+      const r2=await fetch('/save-baked',{method:'POST',body:JSON.stringify(bakedCache)});
+      if(!r2.ok)throw new Error('save failed');
+      if(failedMedia>0){
+        editBtn.textContent='⚠ '+failedMedia+' file(s) failed — retrying soon';
+        schedulePublish();
+      }else editBtn.textContent='✓ saved to site';
+      setTimeout(()=>{editBtn.textContent=btnLabel()},2600);
+    }catch(e){
+      console.warn('bake failed',e);
+      editBtn.textContent='⚠ save failed — edits kept in browser';
+      setTimeout(()=>{editBtn.textContent=btnLabel()},3500);
+    }finally{baking=false}
+  }
+  window.__bakeEverything=async()=>{ /* one-off: treat every stored item as unsaved */
+    await new Promise(res=>{const p=[];eachMedia((k)=>{dirtyMedia.add(k)});setTimeout(res,800)});
+    return bakeAll();
+  };
+  editBtn.addEventListener('click',()=>{
+    const on=!html.classList.contains('editing');
+    setEditing(on);
+    if(!on)bakeAll();
+  });
+
+  /* the Edit button exists only for the site owner: shown after the server
+     confirms admin access (always granted on the local Mac, password-gated live) */
+  fetch('/auth-check').then(r=>{
+    if(r.ok){
+      editBtn.style.display='';
+      if(window.__wizardAuthed)window.__wizardAuthed();
+      if(new URLSearchParams(location.search).get('edit')==='1')setEditing(true);
+      /* self-heal: publish anything sitting in this browser that never reached the server */
+      setTimeout(()=>{
+        eachMedia(mid=>{if(!(bakedCache.media&&bakedCache.media[mid]))dirtyMedia.add(mid)});
+        setTimeout(()=>{if(dirtyMedia.size)schedulePublish()},1500);
+      },2500);
+    }
+  }).catch(()=>{});
+
+  filePick.addEventListener('change',async()=>{
+    if(currentBrandId){
+      let f=filePick.files[0];
+      const id=currentBrandId;currentBrandId=null;
+      if(f){
+        try{
+          f=await normalizeBlob(f);
+          await putMedia('br-'+id,f);
+          brandImgUrls[id]=URL.createObjectURL(f);
+          dirtyMedia.add('br-'+id);
+          renderBrands();
+          schedulePublish();
+        }catch(err){alert('That logo could not be used: '+err.message)}
+      }
+      filePick.value='';
+      return;
+    }
+    let f=filePick.files[0];
+    if(f&&currentMedia){
+      const fig=currentMedia;
+      try{
+        if(isHeic(f)){
+          const b=fig.querySelector('.mrep');if(b)b.textContent='converting…';
+          f=await normalizeBlob(f);
+          if(b)b.textContent=fig.classList.contains('clip')?'⇄ photo / video':'⇄ replace';
+        }
+        applyMedia(fig,f);
+        await putMedia(fig.dataset.mid,f);
+        markFilled(fig);
+        dirtyMedia.add(fig.dataset.mid);
+        schedulePublish();
+      }catch(err){alert('That photo could not be used: '+err.message)}
+    }
+    filePick.value='';
+  });
+
+  /* text edits persist as you type */
+  document.addEventListener('input',e=>{
+    const el=e.target.closest&&e.target.closest('[data-eid]');
+    if(el&&html.classList.contains('editing')){
+      store.text[el.dataset.eid]=el.innerHTML;saveText();schedulePublish();
+    }
+  });
+
+  /* click text -> style panel targets it */
+  document.addEventListener('click',e=>{
+    if(!html.classList.contains('editing'))return;
+    if(e.target.closest('#stylePanel,#editBtn,.mrep'))return;
+    const el=e.target.closest('[data-eid]');
+    if(el&&el.tagName==='A')e.preventDefault();
+    if(!el)return;
+    currentEl=el;
+    spTarget.textContent='Styling: '+(el.textContent.trim().slice(0,26)||el.tagName)+'…';
+    const s=store.style[el.dataset.eid]||{};
+    spFont.value=s.ff||'';
+    spSize.value=s.fs||Math.round(parseFloat(getComputedStyle(el).fontSize));
+  });
+
+  function styleCurrent(){
+    if(!currentEl)return;
+    const eid=currentEl.dataset.eid;
+    const s=store.style[eid]||{};
+    if(spFont.value){s.ff=spFont.value;currentEl.style.fontFamily=s.ff}
+    const px=parseInt(spSize.value,10);
+    if(px){s.fs=px;currentEl.style.fontSize=px+'px'}
+    store.style[eid]=s;saveStyle();schedulePublish();
+  }
+  spFont.addEventListener('change',styleCurrent);
+  spSize.addEventListener('input',styleCurrent);
+
+  document.getElementById('spResetEl').addEventListener('click',()=>{
+    if(!currentEl)return;
+    const eid=currentEl.dataset.eid;
+    delete store.style[eid];delete store.text[eid];
+    saveStyle();saveText();
+    location.reload();
+  });
+  /* ---------- stickers ----------
+     Drawn as SVG using currentColor so every sticker picks up the site's accent and
+     looks native to whoever's page it is, rather than pasted on. Ten of them: enough
+     to decorate, few enough to choose from without a menu. */
+  const STROKE='fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"';
+  const ART={
+    sprig:`<svg viewBox="0 0 100 100"><path ${STROKE} d="M50 92V26"/><path ${STROKE} d="M50 60C34 60 26 50 26 38c14 0 24 8 24 22Z"/><path ${STROKE} d="M50 46c16 0 24-10 24-22-14 0-24 8-24 22Z"/><path ${STROKE} d="M50 78c-14 0-21-9-21-19 12 0 21 7 21 19Z"/></svg>`,
+    daisy:`<svg viewBox="0 0 100 100"><g ${STROKE}><ellipse cx="50" cy="26" rx="11" ry="16"/><ellipse cx="50" cy="74" rx="11" ry="16"/><ellipse cx="26" cy="50" rx="16" ry="11"/><ellipse cx="74" cy="50" rx="16" ry="11"/><circle cx="50" cy="50" r="8"/></g></svg>`,
+    sparkle:`<svg viewBox="0 0 100 100"><path ${STROKE} d="M50 10c4 22 14 32 36 40-22 8-32 18-36 40-4-22-14-32-36-40 22-8 32-18 36-40Z"/></svg>`,
+    twinkles:`<svg viewBox="0 0 100 100"><path ${STROKE} d="M30 14c2 12 7 17 19 19-12 2-17 7-19 19-2-12-7-17-19-19 12-2 17-7 19-19Z"/><path ${STROKE} d="M70 48c2 10 6 14 16 16-10 2-14 6-16 16-2-10-6-14-16-16 10-2 14-6 16-16Z"/><path ${STROKE} d="M32 68c1 7 4 10 11 11-7 1-10 4-11 11-1-7-4-10-11-11 7-1 10-4 11-11Z"/></svg>`,
+    sun:`<svg viewBox="0 0 100 100"><circle ${STROKE} cx="50" cy="50" r="20"/><g ${STROKE}><path d="M50 10v10"/><path d="M50 80v10"/><path d="M10 50h10"/><path d="M80 50h10"/><path d="M22 22l7 7"/><path d="M71 71l7 7"/><path d="M78 22l-7 7"/><path d="M29 71l-7 7"/></g></svg>`,
+    heart:`<svg viewBox="0 0 100 100"><path ${STROKE} d="M50 84C24 66 14 52 14 38a20 20 0 0 1 36-12 20 20 0 0 1 36 12c0 14-10 28-36 46Z"/></svg>`,
+    arrow:`<svg viewBox="0 0 100 100"><path ${STROKE} d="M14 30c30-14 56-4 68 22"/><path ${STROKE} d="M66 66l16-14 4 20"/></svg>`,
+    squiggle:`<svg viewBox="0 0 100 100"><path ${STROKE} d="M8 58c10-14 20-14 30 0s20 14 30 0 16-12 24-4"/></svg>`,
+    film:`<svg viewBox="0 0 100 100"><rect ${STROKE} x="12" y="26" width="76" height="48" rx="6"/><g ${STROKE}><path d="M28 26v48"/><path d="M72 26v48"/><path d="M12 50h16"/><path d="M72 50h16"/></g></svg>`,
+    cup:`<svg viewBox="0 0 100 100"><path ${STROKE} d="M20 38h50v26a20 20 0 0 1-20 20H40a20 20 0 0 1-20-20Z"/><path ${STROKE} d="M70 46h8a11 11 0 0 1 0 22h-8"/><path ${STROKE} d="M36 14c-4 6 0 10 0 16M52 14c-4 6 0 10 0 16"/></svg>`
+  };
+  const STICKER_SECTIONS=DEFAULT_ORDER;          /* same five sections you can reorder */
+  const MAX_STICKERS=12;                          /* per section — a soft, friendly ceiling */
+  const BLEED=0.5;                                /* how far past its section a sticker may hang */
+  const trayGrid=document.getElementById('trayGrid'), traySel=document.getElementById('traySel');
+  const trayTarget=document.getElementById('trayTarget');
+  const stSize=document.getElementById('stSize'), stRot=document.getElementById('stRot'), stDel=document.getElementById('stDel');
+  const stCols=document.getElementById('stCols'), stCustom=document.getElementById('stCustom');
+  const trayList=document.getElementById('trayList');
+  /* colours are stored as a role, not a value, so a sticker keeps following the theme
+     when the palette changes — unless the owner picks a specific colour instead */
+  const COL_ROLE={accent:'var(--yellow)',ink:'var(--brown)',light:'var(--butter)'};
+  const stickerColour=s=>COL_ROLE[s.col]||s.col||'var(--yellow)';
+  let selectedSticker=null;
+  const saveStickers=()=>localStorage.setItem(LS_STICKERS,JSON.stringify(store.stickers));
+
+  const overlay=document.createElement('div');
+  overlay.id='stickerOverlay';
+  document.body.appendChild(overlay);
+
+  /* A sticker's home is a section and a percentage inside it, so it survives reordering
+     and every screen width. Turning that into a page position is done here, and redone
+     whenever the page reflows — images loading, fonts swapping, a phone rotating. */
+  function placeSticker(el,s){
+    const sec=document.getElementById(s.sec);
+    if(!sec||sec.hidden){el.hidden=true;return}
+    el.hidden=false;
+    const top=sec.offsetTop, h=sec.offsetHeight, w=sec.offsetWidth, left=sec.offsetLeft;
+    el.style.left=(left+w*s.x/100)+'px';
+    el.style.top=(top+h*s.y/100)+'px';
+    el.style.width='min(30vw,'+s.w+'px)';
+    const t='translate(-50%,-50%) rotate('+s.rot+'deg)';
+    el.style.setProperty('--st-t',t);      /* the find animation scales from here */
+    el.style.transform=t;
+    el.style.color=stickerColour(s);
+  }
+  function repositionStickers(){
+    overlay.style.height=document.body.scrollHeight+'px';
+    overlay.querySelectorAll('.sticker').forEach(el=>{
+      const s=(store.stickers||[]).find(o=>o.id===el.dataset.id);
+      if(s)placeSticker(el,s);
+    });
+  }
+  function renderStickers(){
+    overlay.innerHTML='';
+    (store.stickers||[]).forEach(s=>{
+      if(!ART[s.art]||!document.getElementById(s.sec))return;
+      const el=document.createElement('span');
+      el.className='sticker'+(selectedSticker===s.id?' sel':'');
+      el.dataset.id=s.id;
+      el.innerHTML=ART[s.art];
+      overlay.appendChild(el);
+      placeSticker(el,s);
+    });
+    repositionStickers();
+    renderStickerList();     /* the panel list and the page never disagree */
+  }
+  /* the page changes height for all sorts of reasons; watch rather than guess */
+  if(window.ResizeObserver){
+    const ro=new ResizeObserver(()=>repositionStickers());
+    ro.observe(document.body);
+    STICKER_SECTIONS.forEach(id=>{const el=document.getElementById(id);if(el)ro.observe(el)});
+  }
+  addEventListener('resize',repositionStickers);
+  addEventListener('load',repositionStickers);
+
+  function selectSticker(id){
+    selectedSticker=id;
+    const s=(store.stickers||[]).find(o=>o.id===id);
+    traySel.hidden=!s;
+    if(s){
+      stSize.value=s.w;stRot.value=s.rot;
+      trayTarget.textContent='Sticker selected';
+      stCols.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.col===s.col)));
+      if(s.col&&s.col.startsWith('#'))stCustom.value=s.col;
+    } else trayTarget.textContent='Drag one onto the page';
+    overlay.querySelectorAll('.sticker').forEach(el=>el.classList.toggle('sel',el.dataset.id===id));
+    renderStickerList();
+  }
+
+  /* clicking a sticker should take you to the tab that can change it */
+  function showStickerTab(){
+    panel.hidden=false;
+    panel.querySelectorAll('.sp-tabs button').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.pane==='stickers')));
+    panel.querySelectorAll('.sp-pane').forEach(p=>{p.hidden=p.dataset.pane!=='stickers'});
+  }
+
+  /* the list of everything placed — the answer to "where did that sticker go?" */
+  function renderStickerList(){
+    const list=store.stickers||[];
+    trayList.innerHTML='';
+    if(!list.length)return;
+    const labelOf=id=>(SECTIONS.find(x=>x.id===id)||{label:id}).label;
+    list.forEach(s=>{
+      const row=document.createElement('div');
+      row.className='item'+(s.id===selectedSticker?' on':'');
+      row.innerHTML=ART[s.art]+'<span class="where">'+labelOf(s.sec)+'</span>';
+      row.querySelector('svg').style.color=stickerColour(s);
+      row.title='Find this sticker';
+      row.addEventListener('click',e=>{if(!e.target.closest('.x'))findSticker(s.id)});
+      const x=document.createElement('button');
+      x.type='button';x.className='x';x.textContent='×';x.title='Remove';
+      x.setAttribute('aria-label','Remove this sticker');
+      x.addEventListener('click',()=>removeSticker(s.id));
+      row.appendChild(x);
+      trayList.appendChild(row);
+    });
+    const all=document.createElement('button');
+    all.type='button';all.className='all';
+    const plural=list.length>1?'stickers':'sticker';
+    all.textContent='Remove all '+list.length+' '+plural;
+    all.addEventListener('click',()=>{
+      if(!confirm('Remove all '+list.length+' '+plural+'?'))return;
+      store.stickers=[];selectedSticker=null;traySel.hidden=true;
+      saveStickers();renderStickers();renderStickerList();schedulePublish();
+    });
+    trayList.appendChild(all);
+  }
+  function removeSticker(id){
+    store.stickers=(store.stickers||[]).filter(s=>s.id!==id);
+    if(selectedSticker===id){selectedSticker=null;traySel.hidden=true}
+    saveStickers();renderStickers();renderStickerList();renderSecList();schedulePublish();
+  }
+  /* scroll to it and make it pulse — pale stickers on pale sections are easy to lose */
+  function findSticker(id){
+    const el=overlay.querySelector('.sticker[data-id="'+id+'"]');
+    if(!el)return;
+    selectSticker(id);
+    const r=el.getBoundingClientRect();
+    scrollTo({top:scrollY+r.top-innerHeight/2+r.height/2,behavior:'smooth'});
+    el.classList.remove('finding');
+    void el.offsetWidth;
+    el.classList.add('finding');
+    setTimeout(()=>el.classList.remove('finding'),1300);
+  }
+
+  /* which section is under this point, and where inside it? */
+  function hitSection(clientX,clientY){
+    for(const id of STICKER_SECTIONS){
+      const el=document.getElementById(id);
+      if(!el)continue;
+      const r=el.getBoundingClientRect();
+      /* a little slack past the edges, so dropping on a boundary still lands somewhere */
+      if(clientY>=r.top-40&&clientY<=r.bottom+40&&clientX>=r.left&&clientX<=r.right){
+        return {sec:id,
+          x:Math.max(-BLEED*100+2,Math.min(100+BLEED*100-2,(clientX-r.left)/r.width*100)),
+          y:Math.max(-8,Math.min(108,(clientY-r.top)/r.height*100))};
+      }
+    }
+    return null;
+  }
+  /* tap-to-add: the middle of what you can SEE of the section, not the middle of the
+     section — on a tall Gallery those are hundreds of pixels apart */
+  function visibleSpotIn(secId){
+    const el=document.getElementById(secId);
+    const r=el.getBoundingClientRect();
+    const top=Math.max(r.top,0), bottom=Math.min(r.bottom,innerHeight);
+    const midY=(top+bottom)/2;
+    return {x:50,y:Math.max(4,Math.min(96,(midY-r.top)/r.height*100))};
+  }
+  function sectionInView(){
+    const mid=innerHeight/2;
+    let best=null,bestDist=Infinity;
+    STICKER_SECTIONS.forEach(id=>{
+      const el=document.getElementById(id);
+      if(!el)return;
+      const r=el.getBoundingClientRect();
+      if(r.bottom<0||r.top>innerHeight)return;
+      const d=Math.abs(Math.max(r.top,0)+Math.min(r.bottom,innerHeight))/2-mid;
+      if(Math.abs(d)<bestDist){bestDist=Math.abs(d);best=id}
+    });
+    return best||STICKER_SECTIONS[0];
+  }
+  function addSticker(art,at){
+    const sec=at?at.sec:sectionInView();
+    const inSection=(store.stickers||[]).filter(s=>s.sec===sec).length;
+    if(inSection>=MAX_STICKERS){trayTarget.textContent='That section is full ('+MAX_STICKERS+')';return}
+    const spot=at||visibleSpotIn(sec);
+    const s={id:'s'+Date.now().toString(36),art,sec,x:Math.round(spot.x*10)/10,y:Math.round(spot.y*10)/10,w:110,rot:0,col:'accent'};
+    store.stickers=[...(store.stickers||[]),s];
+    saveStickers();renderStickers();selectSticker(s.id);renderSecList();schedulePublish();
+  }
+  function updateSelected(patch){
+    const s=(store.stickers||[]).find(o=>o.id===selectedSticker);
+    if(!s)return;
+    Object.assign(s,patch);
+    saveStickers();renderStickers();renderStickerList();schedulePublish();
+  }
+
+  /* tray tiles: press and drag onto the page, or just tap */
+  let fromTray=null;
+  Object.keys(ART).forEach(key=>{
+    const b=document.createElement('button');
+    b.type='button';b.title='Add '+key;b.setAttribute('aria-label','Add '+key+' sticker');
+    b.innerHTML=ART[key];
+    b.addEventListener('pointerdown',e=>{
+      e.preventDefault();
+      const ghost=document.createElement('span');
+      ghost.className='sticker-ghost';ghost.style.width='110px';ghost.innerHTML=ART[key];
+      ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';
+      document.body.appendChild(ghost);
+      fromTray={art:key,ghost,moved:false,pid:e.pointerId};
+      try{b.setPointerCapture(e.pointerId)}catch(err){}
+    });
+    b.addEventListener('click',e=>e.preventDefault());
+    trayGrid.appendChild(b);
+  });
+  stCols.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    updateSelected({col:b.dataset.col});
+    stCols.querySelectorAll('button').forEach(o=>o.setAttribute('aria-pressed',String(o===b)));
+  }));
+  stCustom.addEventListener('input',()=>{
+    updateSelected({col:stCustom.value});
+    stCols.querySelectorAll('button').forEach(o=>o.setAttribute('aria-pressed','false'));
+  });
+  stSize.addEventListener('input',()=>updateSelected({w:Number(stSize.value)}));
+  stRot.addEventListener('input',()=>updateSelected({rot:Number(stRot.value)}));
+  stDel.addEventListener('click',()=>{
+    store.stickers=(store.stickers||[]).filter(s=>s.id!==selectedSticker);
+    selectedSticker=null;traySel.hidden=true;trayTarget.textContent='Drag one onto the page';
+    saveStickers();renderStickers();schedulePublish();
+  });
+
+  /* dragging: one pointer path for mouse, trackpad and finger */
+  let drag=null;
+  document.addEventListener('pointerdown',e=>{
+    if(!html.classList.contains('editing'))return;
+    const el=e.target.closest('.sticker');
+    if(!el)return;
+    e.preventDefault();
+    const s=(store.stickers||[]).find(o=>o.id===el.dataset.id);
+    if(!s)return;
+    showStickerTab();
+    selectSticker(s.id);
+    const rect=document.getElementById(s.sec).getBoundingClientRect();
+    drag={s,el,rect,px:e.clientX,py:e.clientY,x0:s.x,y0:s.y,moved:false};
+    el.setPointerCapture(e.pointerId);
+  });
+  document.addEventListener('pointermove',e=>{
+    if(fromTray){
+      fromTray.moved=true;
+      fromTray.ghost.style.left=e.clientX+'px';
+      fromTray.ghost.style.top=e.clientY+'px';
+      return;
+    }
+    if(!drag)return;
+    const dx=(e.clientX-drag.px)/drag.rect.width*100;
+    const dy=(e.clientY-drag.py)/drag.rect.height*100;
+    if(Math.abs(e.clientX-drag.px)>2||Math.abs(e.clientY-drag.py)>2)drag.moved=true;
+    /* a sticker may hang half its width past its section, so it reads as placed on the
+       page rather than boxed inside a panel */
+    drag.s.x=Math.max(-BLEED*100,Math.min(100+BLEED*100,drag.x0+dx));
+    drag.s.y=Math.max(-8,Math.min(108,drag.y0+dy));
+    placeSticker(drag.el,drag.s);
+  });
+  /* a press that never becomes a drop — the browser cancels it when a scroll takes over,
+     which is constant on touch. Without this the tray stays armed and the next tap
+     anywhere drops a sticker the owner never asked for. */
+  function cancelTrayDrag(){
+    if(!fromTray)return;
+    fromTray.ghost.remove();
+    fromTray=null;
+  }
+  document.addEventListener('pointercancel',cancelTrayDrag);
+  addEventListener('blur',cancelTrayDrag);
+  document.addEventListener('pointerup',e=>{
+    if(fromTray){
+      if(fromTray.pid!==undefined&&e.pointerId!==fromTray.pid)return;   /* not the pointer that armed it */
+      const {art,ghost,moved}=fromTray;
+      fromTray=null;
+      ghost.remove();
+      const at=moved?hitSection(e.clientX,e.clientY):null;
+      if(moved&&!at)trayTarget.textContent='Drop it over a section';
+      else addSticker(art,at);
+      return;
+    }
+    if(!drag)return;
+    if(drag.moved){saveStickers();schedulePublish()}
+    drag=null;
+  });
+
+  /* ---- the reorder list itself: draggable on desktop, arrows for touch and keyboard
+     (HTML5 drag events never fire on a phone, and a buyer editing on their phone is
+     the normal case here) ---- */
+  const secList=document.getElementById('secList');
+  let dragId=null;
+  function commitOrder(order){
+    store.order=cleanOrder(order);
+    applyOrder(store.order);
+    saveOrder();
+    renderSecList();
+    schedulePublish();
+  }
+  function renderSecList(){
+    if(!secList)return;
+    const order=cleanOrder(store.order||DEFAULT_LAYOUT);
+    secList.innerHTML='';
+    order.forEach((id,i)=>{
+      const meta=SECTIONS.find(s=>s.id===id);
+      const li=document.createElement('li');
+      const pinned=id==='contact';
+      li.draggable=!pinned;li.dataset.id=id;
+      if(pinned)li.title='Contact always sits at the bottom of the page';
+      const grip=document.createElement('span');grip.className='grip';
+      grip.textContent=pinned?'▪':'⠿';grip.setAttribute('aria-hidden','true');
+      const nm=document.createElement('span');nm.className='nm';nm.textContent=meta.label;
+      const up=document.createElement('button');
+      up.type='button';up.className='mv';up.textContent='↑';up.title='Move up';
+      up.setAttribute('aria-label','Move '+meta.label+' up');
+      up.disabled=i===0||pinned;
+      up.addEventListener('click',()=>{const o=[...order];[o[i-1],o[i]]=[o[i],o[i-1]];commitOrder(o)});
+      const dn=document.createElement('button');
+      dn.type='button';dn.className='mv';dn.textContent='↓';dn.title='Move down';
+      dn.setAttribute('aria-label','Move '+meta.label+' down');
+      dn.disabled=i===order.length-1||pinned||order[i+1]==='contact';
+      dn.addEventListener('click',()=>{const o=[...order];[o[i+1],o[i]]=[o[i],o[i+1]];commitOrder(o)});
+      const off=hiddenList().includes(id);
+      if(off)li.classList.add('off');
+      const tone=document.createElement('button');
+      tone.type='button';tone.className='tone';
+      const t0=toneOf(id);
+      tone.style.background='var(--t-'+t0+')';
+      tone.title='Section colour: '+t0+' — click to change';
+      tone.setAttribute('aria-label',tone.title);
+      tone.addEventListener('click',()=>{
+        const nxt=TONE_CYCLE[(TONE_CYCLE.indexOf(toneOf(id))+1)%TONE_CYCLE.length];
+        store.tones={...(store.tones||{}),[id]:nxt};
+        saveTones();applyTones();renderSecList();
+      });
+      const vis=document.createElement('button');
+      vis.type='button';vis.className='sw';
+      vis.title=off?'Show '+meta.label+' on the page':'Hide '+meta.label+' from the page';
+      vis.setAttribute('aria-label',vis.title);
+      vis.setAttribute('aria-pressed',String(!off));
+      const knob=document.createElement('span');knob.className='knob';
+      vis.appendChild(knob);
+      vis.addEventListener('click',()=>{
+        const h=hiddenList().filter(x=>x!==id);
+        if(!off)h.push(id);
+        saveHidden(h);applyHidden();renderSecList();
+        repositionStickers();   /* stickers on a hidden section leave with it */
+      });
+      const n=(store.stickers||[]).filter(x=>x.sec===id).length;
+      if(n){
+        const badge=document.createElement('button');
+        badge.type='button';badge.className='count';badge.textContent=n;
+        badge.title='Remove the '+n+' sticker'+(n>1?'s':'')+' in '+meta.label;
+        badge.setAttribute('aria-label',badge.title);
+        badge.addEventListener('click',ev=>{
+          ev.stopPropagation();
+          if(!confirm('Remove '+n+' sticker'+(n>1?'s':'')+' from '+meta.label+'?'))return;
+          store.stickers=(store.stickers||[]).filter(x=>x.sec!==id);
+          selectedSticker=null;traySel.hidden=true;
+          saveStickers();renderStickers();renderStickerList();renderSecList();schedulePublish();
+        });
+        li.append(grip,nm,badge,tone,vis,up,dn);
+      } else li.append(grip,nm,tone,vis,up,dn);
+      if(!pinned)li.addEventListener('dragstart',e=>{dragId=id;li.classList.add('drag');e.dataTransfer.effectAllowed='move'});
+      li.addEventListener('dragend',()=>{dragId=null;li.classList.remove('drag');
+        [...secList.children].forEach(c=>c.classList.remove('over'))});
+      li.addEventListener('dragover',e=>{e.preventDefault();if(dragId&&dragId!==id)li.classList.add('over')});
+      li.addEventListener('dragleave',()=>li.classList.remove('over'));
+      li.addEventListener('drop',e=>{
+        e.preventDefault();li.classList.remove('over');
+        if(!dragId||dragId===id)return;
+        const o=order.filter(x=>x!==dragId);
+        o.splice(o.indexOf(id),0,dragId);   /* land it where the target sits */
+        commitOrder(o);
+      });
+      secList.appendChild(li);
+    });
+  }
+  renderSecList();
+
+  /* ---------- first-run setup wizard ----------
+     Runs once on a fresh install (no baked.json yet) and re-openable from the
+     style panel. It writes through the same stores as hand editing, so nothing
+     here is a second source of truth. */
+  const wiz=document.getElementById('wiz');
+  const wizNav=document.getElementById('wizNav'), wizDots=document.getElementById('wizDots');
+  const wizSteps=[...wiz.querySelectorAll('.wiz-step')];
+  const LAST=wizSteps.length-1, HERO_STEP=LAST-1;
+  const wName=document.getElementById('wName'), wTagline=document.getElementById('wTagline'),
+        wHandle=document.getElementById('wHandle'), wTikTok=document.getElementById('wTikTok'),
+        wInsta=document.getElementById('wInsta'), wEmail=document.getElementById('wEmail'),
+        wGround=document.getElementById('wGround'), wAccent=document.getElementById('wAccent'),
+        wDark=document.getElementById('wDark'), wHeroStatus=document.getElementById('wHeroStatus'),
+        wDoneStatus=document.getElementById('wDoneStatus');
+  const nextBtns=[...wiz.querySelectorAll('[data-next]')], backBtn=wiz.querySelector('[data-back]');
+  let step=0, authOK=false, wizNeeded=null, wizBusy=false, colourOnly=false;
+
+  const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  /* write into the page the same way a hand edit does: element first, store second */
+  function setField(field,htmlStr){
+    const el=document.querySelector('[data-field="'+field+'"]');
+    if(!el)return;
+    el.innerHTML=htmlStr;
+    const owner=el.closest('[data-eid]');
+    if(owner){store.text[owner.dataset.eid]=owner.innerHTML;saveText()}
+  }
+  const PRESETS=[
+    {name:'Terracotta',ground:'#f8ece2', accent:'#dd9b6c', dark:'#3d2418'},
+    {name:'Butter',    ground:'#f3ecb8', accent:'#e9dc8e', dark:'#3f2d1d'},
+    {name:'Blush',     ground:'#f7e9e4', accent:'#e6b0a2', dark:'#412a29'},
+    {name:'Sage',      ground:'#e9efe3', accent:'#b7c9a2', dark:'#2e3a2b'},
+    {name:'Lilac',     ground:'#eee9f6', accent:'#c6b2e3', dark:'#332c45'},
+    {name:'Espresso',  ground:'#f2efe8', accent:'#d8c49c', dark:'#23201c'},
+    {name:'Sky',       ground:'#e8eff5', accent:'#a8c6dd', dark:'#22323f'},
+    {name:'Mint',      ground:'#e6f2ec', accent:'#9fd0b8', dark:'#1f3830'},
+    {name:'Rose',      ground:'#fbe9ee', accent:'#e79db2', dark:'#43222d'},
+    {name:'Slate',     ground:'#edeef0', accent:'#aab2bd', dark:'#22262c'},
+    {name:'Marigold',  ground:'#fdefd9', accent:'#f2b632', dark:'#3a2a12'},
+    {name:'Ink',       ground:'#f4f3f1', accent:'#cfcac0', dark:'#141414'}
+  ];
+  const presetWrap=document.getElementById('wPresets');
+  const preview=document.getElementById('wPreview');
+  const contrastNote=document.getElementById('wContrast');
+  PRESETS.forEach(p=>{
+    const b=document.createElement('button');
+    b.type='button';b.className='wiz-swatch';b.setAttribute('aria-pressed','false');
+    b.setAttribute('aria-label','Palette: '+p.name);
+    const bar=document.createElement('span');bar.className='bar';
+    [p.dark,p.accent,p.ground].forEach(c=>{const s=document.createElement('span');s.style.background=c;bar.appendChild(s)});
+    const nm=document.createElement('b');nm.textContent=p.name;
+    b.append(bar,nm);
+    b.addEventListener('click',()=>{
+      wGround.value=p.ground;wAccent.value=p.accent;wDark.value=p.dark;
+      [...presetWrap.children].forEach(o=>o.setAttribute('aria-pressed',String(o===b)));
+      commitTheme();
+    });
+    presetWrap.appendChild(b);
+  });
+
+  /* WCAG relative luminance — the same maths browsers and accessibility tools use */
+  function luminance(hex){
+    const c=hexToRgb(hex);
+    if(!c)return 1;
+    const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};
+    return .2126*f(c[0])+.7152*f(c[1])+.0722*f(c[2]);
+  }
+  function contrast(a,b){
+    const l1=luminance(a), l2=luminance(b);
+    return (Math.max(l1,l2)+.05)/(Math.min(l1,l2)+.05);
+  }
+  /* Nothing here stops anyone choosing what they like — but a creator picking two pale
+     colours would ship a page brands can't read, and wouldn't find out from a thumbnail. */
+  function checkContrast(t){
+    const bodyText=contrast(t.dark,t.ground);      /* ink on the page background */
+    const onAccent=contrast(t.dark,t.accent);      /* button and pill labels */
+    let msg='';
+    if(bodyText<4.5)msg='Your text and background are too close in tone — this will be hard to read. Try a darker ink or a paler background.';
+    else if(onAccent<3)msg='Your accent is close to your ink, so buttons and tabs will be hard to read.';
+    contrastNote.textContent=msg;
+    contrastNote.hidden=!msg;
+  }
+  /* the little page inside the card, painted from the same three values as the real one */
+  function paintPreview(t){
+    if(!preview)return;
+    preview.style.background=t.ground;
+    const hero=preview.querySelector('.pv-hero');
+    /* same idea as the real hero: ink base with an accent bloom drifting through it */
+    hero.style.background=t.dark;
+    hero.style.backgroundImage='radial-gradient(120% 110% at 32% 34%, '+rgbaStr(t.accent,.6)+', '+rgbaStr(t.accent,0)+' 70%)';
+    preview.querySelector('.pv-name').style.color=t.ground;
+    preview.querySelector('.pv-tag').style.color=t.accent;
+    preview.querySelectorAll('.pv-line').forEach(l=>l.style.background=rgbaStr(t.dark,.28));
+    const btn=preview.querySelector('.pv-btn');
+    btn.style.background=t.dark;btn.style.color=t.ground;
+    const dark=preview.querySelector('.pv-dark');
+    dark.style.background=t.dark;      /* the Work section really is this colour */
+    const pills=preview.querySelectorAll('.pv-pill');
+    pills[0].style.background=t.accent;pills[0].style.color=t.dark;
+    pills[1].style.background='transparent';pills[1].style.color=t.ground;
+    pills[1].style.boxShadow='inset 0 0 0 1px '+rgbaStr(t.ground,.5);
+  }
+  function commitTheme(){
+    store.theme={ground:wGround.value,accent:wAccent.value,dark:wDark.value};
+    saveTheme();applyTheme(store.theme);
+    paintPreview(store.theme);checkContrast(store.theme);
+  }
+  [wGround,wAccent,wDark].forEach(inp=>inp.addEventListener('input',()=>{
+    [...presetWrap.children].forEach(o=>o.setAttribute('aria-pressed','false'));
+    commitTheme();
+  }));
+
+  /* optional sections, offered during setup with the same switch the Layout tab uses */
+  const OPTIONAL_SECTIONS=[
+    {id:'stats',    name:'Stats',        why:'followers, views, engagement — the numbers brands scan for'},
+    {id:'rates',    name:'Rates',        why:'your packages and what they cost'},
+    {id:'examples', name:'Brand work',   why:'real ads with sound — press play'},
+    {id:'reviews',  name:'Testimonials', why:'kind words from brands you\'ve worked with'}
+  ];
+  const wSections=document.getElementById('wSections');
+  OPTIONAL_SECTIONS.forEach(o=>{
+    const lab=document.createElement('label');
+    const cb=document.createElement('input');
+    cb.type='checkbox';cb.dataset.id=o.id;
+    const span=document.createElement('span');
+    span.textContent=o.name;
+    const small=document.createElement('small');
+    small.textContent=o.why;
+    span.appendChild(small);
+    lab.append(cb,span);
+    cb.addEventListener('change',()=>{
+      const h=hiddenList().filter(x=>x!==o.id);
+      if(!cb.checked)h.push(o.id);
+      saveHidden(h);applyHidden();
+    });
+    wSections.appendChild(lab);
+  });
+  function syncSectionChecks(){
+    const h=hiddenList();
+    wSections.querySelectorAll('input').forEach(cb=>{cb.checked=!h.includes(cb.dataset.id)});
+  }
+
+  /* every field applies live, so the page behind the card is the preview */
+  wName.addEventListener('input',()=>{
+    const n=wName.value.trim();
+    if(!n)return;
+    setField('name',esc(n));
+    setField('about-head',"Hey, I'm "+esc(n.split(/\s+/)[0])+'.');
+    setField('copyright','© '+new Date().getFullYear()+' '+esc(n));
+    document.title=n+' | UGC';
+  });
+  wTagline.addEventListener('input',()=>{
+    const t=wTagline.value.trim();
+    if(t)setField('tagline',esc(t).replace(/•/g,'<span class="bigdot">•</span>'));
+  });
+  wHandle.addEventListener('input',()=>{
+    let h=wHandle.value.trim();
+    if(!h)return;
+    if(!h.startsWith('@'))h='@'+h;
+    setField('handle',esc(h));
+  });
+  wEmail.addEventListener('input',()=>{
+    const e=wEmail.value.trim();
+    if(!e)return;
+    setField('email',esc(e));
+    store.links.email=e;saveLinks();applyLinks(store.links);
+  });
+  function commitSocials(){
+    store.links.tiktok=wTikTok.value.trim();
+    store.links.instagram=wInsta.value.trim();
+    saveLinks();applyLinks(store.links);
+  }
+  [wTikTok,wInsta].forEach(i=>i.addEventListener('change',commitSocials));
+
+  /* hero step: same upload path as the ⇄ button on the hero */
+  const wHeroInput=document.createElement('input');
+  wHeroInput.type='file';wHeroInput.accept='video/*';wHeroInput.hidden=true;
+  document.body.appendChild(wHeroInput);
+  document.getElementById('wHeroDrop').addEventListener('click',()=>wHeroInput.click());
+  wHeroInput.addEventListener('change',async()=>{
+    const f=wHeroInput.files[0];wHeroInput.value='';
+    if(!f)return;
+    wizBusy=true;syncNav();
+    try{
+      await uploadHero(f,s=>{wHeroStatus.textContent=s});
+      await window.__heroFilm.reload();
+      wHeroStatus.textContent='✓ your film is playing behind this card';
+    }catch(err){wHeroStatus.textContent='⚠ '+err.message}
+    finally{wizBusy=false;syncNav()}
+  });
+
+  function syncNav(){
+    wizNav.hidden=(step===0);
+    backBtn.hidden=(step<=1||step===LAST||colourOnly);
+    const next=wizNav.querySelector('[data-next]');
+    next.textContent=colourOnly?'Save colours':(step===HERO_STEP?'Finish':(step===LAST?'View my site':'Next'));
+    next.disabled=wizBusy;
+    wizDots.innerHTML='';
+    for(let i=1;i<LAST;i++){
+      const d=document.createElement('i');
+      if(i<=step)d.className='on';
+      wizDots.appendChild(d);
+    }
+  }
+  function showStep(i){
+    step=i;
+    wizSteps.forEach((s,n)=>{s.hidden=n!==i});
+    syncNav();
+    const focusable=wizSteps[i].querySelector('input');
+    if(focusable)setTimeout(()=>focusable.focus(),60);
+  }
+  async function finishWizard(){
+    /* they may have gone back and cleared something after passing it the first time */
+    for(const i of Object.keys(REQUIRED)){
+      if(!REQUIRED[i].ok(REQUIRED[i].input.value)){showStep(Number(i));stepValid(Number(i));return}
+    }
+    wizBusy=true;syncNav();
+    commitSocials();commitTheme();
+    bakedCache.setup={
+      done:true,
+      name:wName.value.trim(),
+      handle:wHandle.value.trim(),
+      completed:new Date().toISOString()
+    };
+    const bar=document.getElementById('setupBanner');
+    if(bar)bar.remove();
+    showStep(LAST);
+    wDoneStatus.textContent='publishing…';
+    try{await bakeAll();wDoneStatus.textContent='✓ published'}
+    catch(e){wDoneStatus.textContent='⚠ could not publish — your edits are safe in this browser and will retry'}
+    wizBusy=false;syncNav();
+  }
+  function closeWizard(){wiz.hidden=true;document.body.style.overflow=''}
+  function openWizard(){
+    /* prefill from whatever the site already says, so re-runs aren't destructive —
+       but never echo the shipped placeholder copy back at a first-time buyer */
+    const SHIPPED=['your name','@yourhandle','you@example.com','hey, i\'m ___.','___'];
+    const cur=f=>{
+      const el=document.querySelector('[data-field="'+f+'"]');
+      const v=el?el.textContent.trim():'';
+      return SHIPPED.includes(v.toLowerCase())?'':v;
+    };
+    const s=bakedCache.setup||{};
+    wName.value=s.name||'';
+    wTagline.value=cur('tagline');
+    wHandle.value=s.handle||cur('handle');
+    wTikTok.value=(store.links.tiktok!==undefined?store.links.tiktok:(bakedCache.links&&bakedCache.links.tiktok))||'';
+    wInsta.value=(store.links.instagram!==undefined?store.links.instagram:(bakedCache.links&&bakedCache.links.instagram))||'';
+    wEmail.value=(store.links.email||(bakedCache.links&&bakedCache.links.email))||cur('email');
+    const th={...PRESETS[0],...(bakedCache.theme||{}),...(store.theme||{})};
+    wGround.value=th.ground;wAccent.value=th.accent;wDark.value=th.dark;
+    [...presetWrap.children].forEach((o,i)=>o.setAttribute('aria-pressed',
+      String(PRESETS[i].ground===th.ground&&PRESETS[i].accent===th.accent&&PRESETS[i].dark===th.dark)));
+    paintPreview(th);checkContrast(th);
+    syncSectionChecks();
+    wHeroStatus.textContent=window.__heroFilm&&window.__heroFilm.hasFilm()?'A film is already set — pick another to replace it.':'';
+    wDoneStatus.textContent='';
+    if(!html.classList.contains('editing'))setEditing(true);
+    wiz.hidden=false;document.body.style.overflow='hidden';
+    showStep(0);
+  }
+  window.maybeOpenWizard=function(baked){
+    colourOnly=false;
+    wizNeeded=!(baked&&baked.setup&&baked.setup.done);
+    if(authOK&&wizNeeded)openWizard();
+  };
+  window.__wizardAuthed=function(){
+    authOK=true;
+    if(wizNeeded)openWizard();
+  };
+  /* the two answers a portfolio can't work without. Everything else — tagline,
+     socials, the hero clip — can be filled in later from the editor, and blocking
+     on them would just strand someone who set up away from their footage. */
+  const REQUIRED={
+    1:{input:wName, err:document.getElementById('wErr1'), ok:v=>v.trim().length>0},
+    3:{input:wEmail, err:document.getElementById('wErr3'), ok:v=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())}
+  };
+  function stepValid(i){
+    const r=REQUIRED[i];
+    if(!r)return true;
+    const good=r.ok(r.input.value);
+    r.err.hidden=good;
+    r.input.classList.toggle('bad',!good);
+    if(!good)r.input.focus();
+    return good;
+  }
+  /* clear the complaint as soon as they start fixing it */
+  Object.values(REQUIRED).forEach(r=>r.input.addEventListener('input',()=>{
+    if(r.ok(r.input.value)){r.err.hidden=true;r.input.classList.remove('bad')}
+  }));
+  nextBtns.forEach(b=>b.addEventListener('click',()=>{
+    if(colourOnly){closeWizard();bakeAll();return}   /* opened just to change colours */
+    if(!stepValid(step))return;
+    if(step===HERO_STEP)return finishWizard();
+    if(step===LAST)return closeWizard();
+    showStep(step+1);
+  }));
+  backBtn.addEventListener('click',()=>showStep(Math.max(0,step-1)));
+  document.getElementById('spWizard').addEventListener('click',()=>{colourOnly=false;openWizard()});
+  document.getElementById('spBackup').addEventListener('click',()=>{location.href='/backup'});
+  if(STORE_URL){
+    const ct=document.getElementById('creditToggle');
+    ct.hidden=false;
+    document.getElementById('creditBox').checked=creditOn();
+    document.getElementById('creditBox').addEventListener('change',e=>{
+      store.credit=e.target.checked;
+      localStorage.setItem(LS_CREDIT,e.target.checked?'1':'0');
+      applyCredit();schedulePublish();
+    });
+  }
+  /* changing colours later shouldn't mean walking the whole wizard again */
+  const COLOUR_STEP=4;
+  document.getElementById('spColours').addEventListener('click',()=>{
+    colourOnly=false;openWizard();colourOnly=true;showStep(COLOUR_STEP);
+  });
+
+  document.getElementById('spResetAll').addEventListener('click',async()=>{
+    if(!confirm('Reset ALL edits — text, styles, colours, photos and clips?'))return;
+    localStorage.removeItem(LS_TEXT);localStorage.removeItem(LS_STYLE);
+    localStorage.removeItem(LS_LINKS);localStorage.removeItem(LS_THEME);localStorage.removeItem(LS_ORDER);
+    localStorage.removeItem(LS_STICKERS);localStorage.removeItem(LS_NICHES);localStorage.removeItem(LS_HIDDEN);localStorage.removeItem(LS_EMBEDS);localStorage.removeItem(LS_TONES);localStorage.removeItem(LS_EXSLOTS);localStorage.removeItem(LS_CREDIT);localStorage.removeItem(LS_HEROPOS);
+    await clearMedia();
+    location.reload();
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+.git
+.gitignore
+
+# local-only ffmpeg symlink — the image installs its own from the distro
+.claude/bin
+.claude/settings.local.json
+.claude/launch.json
+
+# the volume owns this at runtime; anything baked into the image would be shadowed
+assets/user
+
+# working notes, not part of what a buyer runs
+TEMPLATE-BRIEF.md
+PRODUCT.md
+.DS_Store
+tools/

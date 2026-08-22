@@ -1,0 +1,28 @@
+The fonts bundled in this directory are all from Google Fonts and are licensed
+under the SIL Open Font License, Version 1.1.
+
+Full licence text: https://openfontlicense.org/open-font-license-official-text/
+
+In short: they may be used, studied, modified and redistributed freely, including
+as part of this template, provided they are not sold on their own and this notice
+travels with them.
+
+Display and script faces
+  Anton — Copyright (c) Vernon Adams, Cyreal
+  Bebas Neue — Copyright (c) Ryoichi Tsunekawa, Dharma Type
+  Playfair Display — Copyright (c) Claus Eggers Sørensen
+  DM Serif Display — Copyright (c) Colophon Foundry
+  Young Serif — Copyright (c) Uncut.wtf
+  Yellowtail — Copyright (c) Astigmatic
+  Sacramento — Copyright (c) Astigmatic
+  Grand Hotel — Copyright (c) Astigmatic
+  Caveat — Copyright (c) Impallari Type
+  Pacifico — Copyright (c) Vernon Adams
+
+Body faces
+  Archivo — Copyright (c) Omnibus-Type
+  Inter — Copyright (c) The Inter Project Authors
+  Karla — Copyright (c) Jonathan Pinhorn
+  Lora — Copyright (c) Cyreal
+  Work Sans — Copyright (c) Wei Huang
+  Libre Caslon Text — Copyright (c) Pablo Impallari, Rodrigo Fuenzalida
